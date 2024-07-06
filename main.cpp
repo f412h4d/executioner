@@ -34,10 +34,6 @@ int main() {
         std::cout << "Callback for event 4 after 4 seconds" << std::endl;
     });
 
-//    myTimedEventQueue.removeEvent(2);                                                  // remove using value
-//    myTimedEventQueue.removeEvent(now + std::chrono::seconds(2));              // remove using timestamp
-//    myTimedEventQueue.updateValue(now + std::chrono::seconds(4), 5);      // update using value
-//    myTimedEventQueue.updateTimestamp(now + std::chrono::seconds(10), 1); // update using timestamp
     std::this_thread::sleep_for(std::chrono::seconds(20));                          // sleep for 6 seconds
     myTimedEventQueue.stop();
     std::string exePath = Utils::getExecutablePath();

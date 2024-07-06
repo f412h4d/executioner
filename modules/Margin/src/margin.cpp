@@ -87,7 +87,7 @@ namespace Margin {
         nlohmann::json jsonResponse = nlohmann::json::parse(r.text);
 
         // Filter the response to get the balance of the specified asset
-        for (const auto &balance : jsonResponse["assets"]) {
+        for (const auto &balance: jsonResponse["assets"]) {
             if (balance["asset"] == asset) {
                 return balance;
             }

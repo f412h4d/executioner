@@ -12,7 +12,7 @@ namespace Utils {
         escaped.fill('0');
         escaped << std::hex;
 
-        for (char c : value) {
+        for (char c: value) {
             if (isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == '.' || c == '~') {
                 escaped << c;
             } else {
@@ -23,14 +23,14 @@ namespace Utils {
         return escaped.str();
     }
 
-    std::string trimQuotes(const std::string& str) {
+    std::string trimQuotes(const std::string &str) {
         if (str.size() >= 2 && str.front() == '"' && str.back() == '"') {
             return str.substr(1, str.size() - 2);
         }
         return str;
     }
 
-    std::map<std::string, std::string> loadEnvFile(const std::string& filePath) {
+    std::map<std::string, std::string> loadEnvFile(const std::string &filePath) {
         std::map<std::string, std::string> env;
         std::ifstream file(filePath);
         std::string line;
@@ -58,13 +58,13 @@ namespace Utils {
     }
 
 
-
-    std::string HMAC_SHA256(const std::string& key, const std::string& data) {
-        unsigned char* digest;
-        digest = HMAC(EVP_sha256(), key.c_str(), key.length(), (unsigned char*)data.c_str(), data.length(), NULL, NULL);
+    std::string HMAC_SHA256(const std::string &key, const std::string &data) {
+        unsigned char *digest;
+        digest = HMAC(EVP_sha256(), key.c_str(), key.length(), (unsigned char *) data.c_str(), data.length(), NULL,
+                      NULL);
         char mdString[65];
         for (int i = 0; i < 32; i++) {
-            sprintf(&mdString[i * 2], "%02x", (unsigned int)digest[i]);
+            sprintf(&mdString[i * 2], "%02x", (unsigned int) digest[i]);
         }
         return std::string(mdString);
     }

@@ -11,7 +11,8 @@ nlohmann::json OrderService::createOrder(const APIParams &apiParams, const Order
     long timestamp = static_cast<long>(std::time(nullptr) * 1000);
 
     std::string params =
-            "symbol=" + order.symbol + "&side=" + order.side + "&type=" + order.type + "&timeInForce=" + order.timeInForce +
+            "symbol=" + order.symbol + "&side=" + order.side + "&type=" + order.type + "&timeInForce=" +
+            order.timeInForce +
             "&quantity=" + std::to_string(order.quantity) + "&recvWindow=" + std::to_string(apiParams.recvWindow) +
             "&timestamp=" + std::to_string(timestamp);
 
@@ -34,11 +35,14 @@ nlohmann::json OrderService::createTriggerOrder(const APIParams &apiParams, cons
     long timestamp = static_cast<long>(std::time(nullptr) * 1000);
 
     std::string params =
-            "symbol=" + triggerOrder.symbol + "&side=" + triggerOrder.side + "&type=" + triggerOrder.type + "&timeInForce=" + triggerOrder.timeInForce +
-            "&quantity=" + std::to_string(triggerOrder.quantity) + "&recvWindow=" + std::to_string(apiParams.recvWindow) +
+            "symbol=" + triggerOrder.symbol + "&side=" + triggerOrder.side + "&type=" + triggerOrder.type +
+            "&timeInForce=" + triggerOrder.timeInForce +
+            "&quantity=" + std::to_string(triggerOrder.quantity) + "&recvWindow=" +
+            std::to_string(apiParams.recvWindow) +
             "&timestamp=" + std::to_string(timestamp);
 
-    params += "&stopPrice=" + std::to_string(triggerOrder.stopPrice) + "&price=" + std::to_string(triggerOrder.stopPrice);
+    params +=
+            "&stopPrice=" + std::to_string(triggerOrder.stopPrice) + "&price=" + std::to_string(triggerOrder.stopPrice);
 
     std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
     std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
