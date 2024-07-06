@@ -9,18 +9,6 @@
 
 
 int main() {
-    SignalQueue signalQueue;
-
-    auto now = TIME::now();
-    signalQueue.addEvent(now + std::chrono::seconds(3), "First event after 3 secs", []() {
-        std::cout << "Callback for event 1 after 3 seconds" << std::endl;
-    });
-    signalQueue.addEvent(now + std::chrono::seconds(10), "Second event after 10 secs", []() {
-        std::cout << "Callback for event 2 after 10 seconds" << std::endl;
-    });
-
-    std::this_thread::sleep_for(std::chrono::seconds(20));                          // sleep for 6 seconds
-    signalQueue.stop();
     std::string exePath = Utils::getExecutablePath();
     std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
     std::string envFilePath = exeDir + "/../.env";
