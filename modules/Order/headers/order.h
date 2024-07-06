@@ -8,11 +8,11 @@
 
 class OrderService {
 public:
-    nlohmann::json createOrder(const APIParams &apiParams, const OrderInput &order);
+    static nlohmann::json createOrder(const APIParams &apiParams, const OrderInput &order);
 
-    nlohmann::json createTriggerOrder(const APIParams &apiParams, const TriggerOrderInput &triggerOrder);
+    static nlohmann::json createTriggerOrder(const APIParams &apiParams, const TriggerOrderInput &triggerOrder);
 
-    nlohmann::json cancelAllOpenOrders(const APIParams &apiParams, const std::string &symbol);
+    static nlohmann::json cancelAllOpenOrders(const APIParams &apiParams, const std::string &symbol);
 };
 
 #endif // ORDER_SERVICE_H

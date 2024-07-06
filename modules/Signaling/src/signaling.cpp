@@ -1,7 +1,6 @@
 #include "signaling.h"
 #include "order.h"
 #include "margin.h"
-#include "utils.h"
 #include "../../TimedEventQueue/headers/SignalQueue.h"
 
 #include <iostream>
@@ -12,9 +11,9 @@
 #include <cstdio>
 
 #define EXEC_DELAY 5
-#define CANCEL_DELAY 15
+#define CANCEL_DELAY 10
 
-bool prepareForOrder(int signal, const APIParams &apiParams) {
+bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
     size_t array_length;
 
@@ -75,14 +74,14 @@ namespace Signaling {
 
         std::vector<int> signals = readSignalsFromFile(filePath);
 
-        OrderService orderService;
-
         for (size_t i = 0; i < signals.size(); ++i) {
             int signal = signals[i];
             bool isLastSignal = (i == signals.size() - 1);
 
             if (signal == 0 && !isLastSignal) {
                 std::cout << "Signaling received: DO NOTHING" << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+
                 continue;
             }
 
@@ -96,8 +95,8 @@ namespace Signaling {
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
                         "Signal #" + std::to_string(i) + " is executed.",
-                        [&i, &signal, &apiParams, &orderService, &signalQueue]() {
-                            bool validConditions = prepareForOrder(signal, apiParams);
+                        [&apiParams]() {
+                            bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
                                 return;
                             }
@@ -106,7 +105,7 @@ namespace Signaling {
                             double slPrice;
                             double calculated_price;
 
-                            calculated_price = 50000;
+                            calculated_price = 59000;
                             tpPrice = 71000.0; // Example TP price
                             slPrice = 45000.0; // Example SL price
 
@@ -119,7 +118,7 @@ namespace Signaling {
                                     calculated_price
                             );
 
-                            auto order_response = orderService.createOrder(apiParams, order);
+                            auto order_response = OrderService::createOrder(apiParams, order);
                             std::cout << "Order Response: " << order_response.dump(4) << std::endl;
 
                             if (order_response.contains("orderId")) {
@@ -136,7 +135,7 @@ namespace Signaling {
                                         tpPrice,
                                         tpPrice
                                 );
-                                auto tp_response = orderService.createTriggerOrder(apiParams, tpOrder);
+                                auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
                                 std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
 
                                 // Stop Loss Order
@@ -149,45 +148,44 @@ namespace Signaling {
                                         slPrice,
                                         slPrice
                                 );
-                                auto sl_response = orderService.createTriggerOrder(apiParams, slOrder);
+                                auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
                                 std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
+                            }
+                        }
+                );
 
-                                std::cout << "Signal #" + std::to_string(i) + " with order_id: " +
-                                             order_response["orderId"].get<std::string>() +
-                                             " is going to be canceled in " +
-                                             std::to_string(CANCEL_DELAY) + "seconds.";
 
-                                // TODO maybe define cancel queue?
-                                signalQueue.addEvent(
-                                        TIME::now() + std::chrono::seconds(CANCEL_DELAY),
-                                        "Trying to cancel the order " + order_response["orderId"].get<std::string>(),
-                                        [&apiParams, &orderService]() {
-                                            auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-                                            if (open_orders_response.is_array() && !open_orders_response.empty()) {
-                                                auto response = orderService.cancelAllOpenOrders(apiParams, "BTCUSDT");
-                                                std::cout << "Cancel All Orders Response: " << response.dump(4)
-                                                          << std::endl;
-                                            } else {
-                                                std::cerr << "Unexpected response format: "
-                                                          << open_orders_response.dump(4)
-                                                          << std::endl;
-                                            }
-                                        }
-                                );
+                std::cout << "Signal #" + std::to_string(i) + " Added to queue to be canceled" << std::endl;
+                // TODO maybe define cancel queue?
+                signalQueue.addEvent(
+                        TIME::now() + std::chrono::seconds(CANCEL_DELAY),
+                        "Trying to cancel the order number " + std::to_string(i),
+                        [&apiParams]() {
+                            std::cout << "\n\n\n__________________ Canceling\n";
+                            auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
+                            if (open_orders_response.is_array() && !open_orders_response.empty()) {
+                                auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
+                                std::cout << "Cancel All Orders Response: " << response.dump(4)
+                                          << std::endl;
+                            } else {
+                                std::cerr << "Unexpected response format: "
+                                          << open_orders_response.dump(4)
+                                          << std::endl;
                             }
                         }
                 );
             } else if (signal == -1) {
                 std::cout << "Signaling received: SELL" << std::endl;
 
-                std::cout << "Signal #" + std::to_string(i) + " is going to be executed in " +
-                             std::to_string(EXEC_DELAY) +
-                             " seconds" << std::endl;
+                std::cout << "Signal #" + std::to_string(i) +
+                             " is going to be canceled in " +
+                             std::to_string(CANCEL_DELAY) + "seconds." << std::endl;
+
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
                         "Signal #" + std::to_string(i) + " is executed.",
-                        [&i, &signal, &apiParams, &orderService, &signalQueue]() {
-                            bool validConditions = prepareForOrder(signal, apiParams);
+                        [&apiParams]() {
+                            bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
                                 return;
                             }
@@ -208,7 +206,7 @@ namespace Signaling {
                                     calculated_price
                             );
 
-                            auto order_response = orderService.createOrder(apiParams, order);
+                            auto order_response = OrderService::createOrder(apiParams, order);
                             std::cout << "Order Response: " << order_response.dump(4) << std::endl;
 
                             if (order_response.contains("orderId")) {
@@ -225,7 +223,7 @@ namespace Signaling {
                                         tpPrice,
                                         tpPrice
                                 );
-                                auto tp_response = orderService.createTriggerOrder(apiParams, tpOrder);
+                                auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
                                 std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
 
                                 // Stop Loss Order
@@ -238,38 +236,37 @@ namespace Signaling {
                                         slPrice,
                                         slPrice
                                 );
-                                auto sl_response = orderService.createTriggerOrder(apiParams, slOrder);
+                                auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
                                 std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
+                            }
+                        }
+                );
 
-                                std::cout << "Signal #" + std::to_string(i) + " with order_id: " +
-                                             order_response["orderId"].get<std::string>() +
-                                             " is going to be canceled in " +
-                                             std::to_string(CANCEL_DELAY) + "seconds.";
+                std::cout << "Signal #" + std::to_string(i) +
+                             " is going to be canceled in " +
+                             std::to_string(CANCEL_DELAY) + "seconds.";
 
-                                // TODO maybe define cancel queue?
-                                signalQueue.addEvent(
-                                        TIME::now() + std::chrono::seconds(CANCEL_DELAY),
-                                        "Trying to cancel the order " + order_response["orderId"].get<std::string>(),
-                                        [&apiParams, &orderService]() {
-                                            auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-                                            if (open_orders_response.is_array() && !open_orders_response.empty()) {
-                                                auto response = orderService.cancelAllOpenOrders(apiParams, "BTCUSDT");
-                                                std::cout << "Cancel All Orders Response: " << response.dump(4)
-                                                          << std::endl;
-                                            } else {
-                                                std::cerr << "Unexpected response format: "
-                                                          << open_orders_response.dump(4)
-                                                          << std::endl;
-                                            }
-                                        }
-                                );
+                // TODO maybe define cancel queue?
+                signalQueue.addEvent(
+                        TIME::now() + std::chrono::seconds(CANCEL_DELAY),
+                        "Signal #" + std::to_string(i) + " is executed.",
+                        [&apiParams]() {
+                            auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
+                            if (open_orders_response.is_array() && !open_orders_response.empty()) {
+                                auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
+                                std::cout << "Cancel All Orders Response: " << response.dump(4)
+                                          << std::endl;
+                            } else {
+                                std::cerr << "Unexpected response format: "
+                                          << open_orders_response.dump(4)
+                                          << std::endl;
                             }
                         }
                 );
             }
 
             // Mimic a delay of 2 seconds
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::seconds(5));
 
             // Check if this is the last signal
             if (isLastSignal) {

@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cpr/cpr.h>
-#include <nlohmann/json.hpp>
 
 #include "utils.h"
 #include "signaling.h"
