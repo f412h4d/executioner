@@ -26,8 +26,6 @@ set(SOURCES
         modules/Order/models/OrderInput/OrderInput.cpp
         modules/Order/models/TriggerOrderInput/TriggerOrderInput.cpp
         modules/Order/src/OrderService.cpp
-
-        modules/TimedEventQueue/headers/TimedEventQueue.hpp
 )
 
 # Add executable

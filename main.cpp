@@ -1,41 +1,26 @@
 #include <iostream>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
+
 #include "utils.h"
 #include "signaling.h"
 #include "APIParams.h"
-
-#include "modules/TimedEventQueue/headers/TimedEventQueue.hpp"
-
-class MyTimedEventQueue : public TimedEventQueue<int> {
-protected:
-    void onTimestampExpire(const TIMESTAMP &timestamp, const int &value) override {
-        std::cout << "Timestamp expired: "
-                  << std::chrono::duration_cast<std::chrono::seconds>(timestamp.time_since_epoch()).count()
-                  << " with value: " << value << std::endl;
-    }
-};
+#include "modules/TimedEventQueue/headers/SignalQueue.h"
 
 
 int main() {
-    MyTimedEventQueue myTimedEventQueue;
+    SignalQueue signalQueue;
 
     auto now = TIME::now();
-    myTimedEventQueue.addEvent(now + std::chrono::seconds(3), 1, []() {
+    signalQueue.addEvent(now + std::chrono::seconds(3), "First event after 3 secs", []() {
         std::cout << "Callback for event 1 after 3 seconds" << std::endl;
     });
-    myTimedEventQueue.addEvent(now + std::chrono::seconds(10), 2, []() {
+    signalQueue.addEvent(now + std::chrono::seconds(10), "Second event after 10 secs", []() {
         std::cout << "Callback for event 2 after 10 seconds" << std::endl;
-    });
-    myTimedEventQueue.addEvent(now + std::chrono::seconds(2), 3, []() {
-        std::cout << "Callback for event 3 after 2 seconds" << std::endl;
-    });
-    myTimedEventQueue.addEvent(now + std::chrono::seconds(4), 4, []() {
-        std::cout << "Callback for event 4 after 4 seconds" << std::endl;
     });
 
     std::this_thread::sleep_for(std::chrono::seconds(20));                          // sleep for 6 seconds
-    myTimedEventQueue.stop();
+    signalQueue.stop();
     std::string exePath = Utils::getExecutablePath();
     std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
     std::string envFilePath = exeDir + "/../.env";

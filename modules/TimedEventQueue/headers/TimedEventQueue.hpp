@@ -8,21 +8,21 @@
 #include <mutex>
 #include <thread>
 #include <iostream>
+#include <string>
 
 using TIME = std::chrono::steady_clock;
 using TIMESTAMP = std::chrono::time_point<TIME>;
 #define CENTENNIAL (TIME::now() + std::chrono::hours(100 * 365 * 24))
 
-template<typename T>
 class TimedEventQueue {
 private:
     struct Event {
-        T value;
+        std::string label;
         std::function<void()> callback;
     };
 
     std::map<TIMESTAMP, Event> _ts2Val;
-    std::map<T, TIMESTAMP> _val2Ts;
+    std::map<std::string, TIMESTAMP> _val2Ts;
     std::mutex _mutex;
     std::condition_variable _cv;
     std::atomic<bool> _exit = false;
@@ -40,23 +40,23 @@ private:
             auto current_time = TIME::now();
             while (_ts2Val.begin()->first <= current_time) {
                 auto event = _ts2Val.begin()->second;
-                std::invoke(&TimedEventQueue<T>::onTimestampExpire, this, _ts2Val.begin()->first, event.value);
+                std::invoke(&TimedEventQueue::onTimestampExpire, this, _ts2Val.begin()->first, event.label);
                 if (event.callback) {
                     event.callback();
                 }
-                _val2Ts.erase(event.value);
+                _val2Ts.erase(event.label);
                 _ts2Val.erase(_ts2Val.begin());
             }
         }
     }
 
 protected:
-    virtual void onTimestampExpire(const TIMESTAMP &timestamp, const T &value) = 0;
+    virtual void onTimestampExpire(const TIMESTAMP &timestamp, const std::string &label) = 0;
 
 public:
     TimedEventQueue() {
         auto dummy_timestamp = CENTENNIAL;
-        addEvent(dummy_timestamp, T(), nullptr);
+        addEvent(dummy_timestamp, "", nullptr);
         _thread = std::thread(&TimedEventQueue::run, this);
     }
 
@@ -66,16 +66,16 @@ public:
 
     TimedEventQueue &operator=(const TimedEventQueue &) = delete;
 
-    void addEvent(const TIMESTAMP &timestamp, const T &value, const std::function<void()> &callback) {
+    void addEvent(const TIMESTAMP &timestamp, const std::string &label, const std::function<void()> &callback) {
         std::scoped_lock lock(_mutex);
-        _ts2Val.emplace(timestamp, Event{value, callback});
-        _val2Ts.emplace(value, timestamp);
+        _ts2Val.emplace(timestamp, Event{label, callback});
+        _val2Ts.emplace(label, timestamp);
         _cv.notify_one();
     }
 
-    void removeEvent(const T &value) {
+    void removeEvent(const std::string &label) {
         std::scoped_lock lock(_mutex);
-        if (auto itr = _val2Ts.find(value); itr != _val2Ts.end()) {
+        if (auto itr = _val2Ts.find(label); itr != _val2Ts.end()) {
             _ts2Val.erase(itr->second);
             _val2Ts.erase(itr);
         }
@@ -84,25 +84,25 @@ public:
     void removeEvent(const TIMESTAMP &timestamp) {
         std::scoped_lock lock(_mutex);
         if (auto itr = _ts2Val.find(timestamp); itr != _ts2Val.end()) {
-            _val2Ts.erase(itr->second.value);
+            _val2Ts.erase(itr->second.label);
             _ts2Val.erase(itr);
         }
     }
 
-    void updateValue(const TIMESTAMP &timestamp, const T &value) {
+    void updateLabel(const TIMESTAMP &timestamp, const std::string &label) {
         std::scoped_lock lock(_mutex);
         if (auto itr = _ts2Val.find(timestamp); _ts2Val.end() != itr) {
-            auto nodeHandler = _val2Ts.extract(itr->second.value);
-            nodeHandler.key() = value;
+            auto nodeHandler = _val2Ts.extract(itr->second.label);
+            nodeHandler.key() = label;
             _val2Ts.insert(std::move(nodeHandler));
-            itr->second.value = value;
+            itr->second.label = label;
         }
         _cv.notify_one();
     }
 
-    void updateTimestamp(const TIMESTAMP &timestamp, const T &value) {
+    void updateTimestamp(const TIMESTAMP &timestamp, const std::string &label) {
         std::scoped_lock lock(_mutex);
-        if (auto itr = _val2Ts.find(value); _val2Ts.end() != itr) {
+        if (auto itr = _val2Ts.find(label); _val2Ts.end() != itr) {
             auto nodeHandler = _ts2Val.extract(itr->second);
             nodeHandler.key() = timestamp;
             _ts2Val.insert(std::move(nodeHandler));
