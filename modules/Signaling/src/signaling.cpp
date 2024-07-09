@@ -11,7 +11,7 @@
 #include <cstdio>
 
 #define EXEC_DELAY 5
-#define CANCEL_DELAY 10
+#define CANCEL_DELAY 1000000
 
 bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
@@ -33,9 +33,23 @@ bool prepareForOrder(const APIParams &apiParams) {
         return false;
     }
 
-    if (array_length != 0 || notional != "0") {
-        std::cerr << "Either Notional or Open Orders are not 0. skipping to the next signal" << std::endl;
+    if (notional != "0") {
+        std::cerr << "Notional is not 0. skipping to the next signal" << std::endl;
         return false;
+    }
+
+    if (array_length == 3) {
+        std::cerr << "There are 3 opening orders. skipping to the next signal" << std::endl;
+        return false;
+    }
+
+    if (array_length == 1) {
+        std::cout << "There is 1 opening orders, cleaning up!!" << std::endl;
+        auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
+        std::cout << "Cancel All Orders Response: " << response.dump(4)
+                  << std::endl;
+
+        return true;
     }
 
     return true;
@@ -105,9 +119,9 @@ namespace Signaling {
                             double slPrice;
                             double calculated_price;
 
-                            calculated_price = 59000;
-                            tpPrice = 71000.0; // Example TP price
-                            slPrice = 45000.0; // Example SL price
+                            calculated_price = 56985;
+                            tpPrice = calculated_price + 100; // Example TP price
+                            slPrice = calculated_price - 100; // Example SL price
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -161,7 +175,21 @@ namespace Signaling {
                         TIME::now() + std::chrono::seconds(CANCEL_DELAY),
                         "Trying to cancel the order number " + std::to_string(i),
                         [&apiParams]() {
-                            std::cout << "\n\n\n__________________ Canceling\n";
+                            std::string notional;
+                            auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
+                            if (positions_response.is_array() && positions_response[0].contains("notional")) {
+                                notional = positions_response[0]["notional"];
+                            } else {
+                                std::cerr << "Notional not found in the response" << std::endl;
+                                return;
+                            }
+
+                            if (notional != "0") {
+                                std::cout << "Canceling aborted due to open position\n";
+                                return;
+                            }
+
+                            std::cout << "\nCanceling:\n";
                             auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
                             if (open_orders_response.is_array() && !open_orders_response.empty()) {
                                 auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
@@ -251,6 +279,21 @@ namespace Signaling {
                         TIME::now() + std::chrono::seconds(CANCEL_DELAY),
                         "Signal #" + std::to_string(i) + " is executed.",
                         [&apiParams]() {
+
+                            std::string notional;
+                            auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
+                            if (positions_response.is_array() && positions_response[0].contains("notional")) {
+                                notional = positions_response[0]["notional"];
+                            } else {
+                                std::cerr << "Notional not found in the response" << std::endl;
+                                return;
+                            }
+
+                            if (notional != "0") {
+                                std::cout << "Canceling aborted due to open position\n";
+                                return;
+                            }
+
                             auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
                             if (open_orders_response.is_array() && !open_orders_response.empty()) {
                                 auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
