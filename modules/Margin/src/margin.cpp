@@ -5,11 +5,23 @@
 #include <ctime>
 
 namespace Margin {
+    std::string getBaseUrl(const APIParams &apiParams) {
+        return apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+    }
+
+    std::string generateSignature(const std::string &secret, const std::string &query_string) {
+        return Utils::HMAC_SHA256(secret, query_string);
+    }
+
+    std::string urlEncode(const std::string &value) {
+        return cpr::util::urlEncode(value);
+    }
+
     double getPrice(
             const APIParams &apiParams,
             const std::string &symbol
     ) {
-        std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+        std::string baseUrl = getBaseUrl(apiParams);
         std::string apiCall = "fapi/v1/ticker/price";
         std::string url = baseUrl + "/" + apiCall + "?symbol=" + symbol;
 
@@ -24,17 +36,17 @@ namespace Margin {
             const APIParams &apiParams,
             const std::string &symbol
     ) {
-        std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+        std::string baseUrl = getBaseUrl(apiParams);
         std::string apiCall = "fapi/v2/positionRisk";
 
         long timestamp = static_cast<long>(std::time(nullptr) * 1000);
-        std::string params = "timestamp=" + std::to_string(timestamp);
+        std::string params = "timestamp=" + std::to_string(timestamp) + "&recvWindow=" + std::to_string(apiParams.recvWindow);
         if (!symbol.empty()) {
             params += "&symbol=" + symbol;
         }
 
-        std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
-        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
+        std::string signature = generateSignature(apiParams.apiSecret, params);
+        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + urlEncode(signature);
 
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
         std::cout << "Response Code: " << r.status_code << std::endl;
@@ -47,18 +59,17 @@ namespace Margin {
             const APIParams &apiParams,
             const std::string &symbol
     ) {
-        std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+        std::string baseUrl = getBaseUrl(apiParams);
         std::string apiCall = "fapi/v1/openOrders";
 
         long timestamp = static_cast<long>(std::time(nullptr) * 1000);
-        std::string params = "timestamp=" + std::to_string(timestamp);
+        std::string params = "timestamp=" + std::to_string(timestamp) + "&recvWindow=" + std::to_string(apiParams.recvWindow);
         if (!symbol.empty()) {
             params += "&symbol=" + symbol;
         }
-        params += "&recvWindow=" + std::to_string(apiParams.recvWindow);
 
-        std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
-        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
+        std::string signature = generateSignature(apiParams.apiSecret, params);
+        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + urlEncode(signature);
 
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
         std::cout << "Response Code: " << r.status_code << std::endl;
@@ -71,14 +82,14 @@ namespace Margin {
             const APIParams &apiParams,
             const std::string &asset
     ) {
-        std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+        std::string baseUrl = getBaseUrl(apiParams);
         std::string apiCall = "fapi/v2/account";
 
         long timestamp = static_cast<long>(std::time(nullptr) * 1000);
-        std::string params = "timestamp=" + std::to_string(timestamp);
+        std::string params = "timestamp=" + std::to_string(timestamp) + "&recvWindow=" + std::to_string(apiParams.recvWindow);
 
-        std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
-        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
+        std::string signature = generateSignature(apiParams.apiSecret, params);
+        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + urlEncode(signature);
 
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
         std::cout << "Response Code: " << r.status_code << std::endl;
@@ -86,14 +97,12 @@ namespace Margin {
 
         nlohmann::json jsonResponse = nlohmann::json::parse(r.text);
 
-        // Filter the response to get the balance of the specified asset
         for (const auto &balance: jsonResponse["assets"]) {
             if (balance["asset"] == asset) {
                 return balance;
             }
         }
 
-        // If the asset is not found, return an empty JSON object
         return nlohmann::json::object();
     }
 }
