@@ -18,11 +18,14 @@ int main() {
     std::string apiKey = useTestnet ? env["TESTNET_API_KEY"] : env["API_KEY"];
     std::string apiSecret = useTestnet ? env["TESTNET_API_SECRET"] : env["API_SECRET"];
 
+    std::cout << env["API_KEY"] << std::endl;
+    std::cout << env["TESTNET"] << std::endl;
+
     APIParams apiParams(
             apiKey,
             apiSecret,
             5000,
-            true
+            env["TESTNET"] == "TRUE"
     );
     Signaling::mockSignal(apiParams);
 
