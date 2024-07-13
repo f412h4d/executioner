@@ -5,7 +5,7 @@
 #include <ctime>
 
 namespace Margin {
-    nlohmann::json getPrice(
+    double getPrice(
             const APIParams &apiParams,
             const std::string &symbol
     ) {
@@ -17,7 +17,7 @@ namespace Margin {
         std::cout << "Response Code: " << r.status_code << std::endl;
         std::cout << "Response Text: " << r.text << std::endl;
 
-        return nlohmann::json::parse(r.text);
+        return std::stod(nlohmann::json::parse(r.text)["price"].get<std::string>());
     }
 
     nlohmann::json getPositions(

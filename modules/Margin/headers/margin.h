@@ -6,7 +6,7 @@
 #include "../../Order/models/APIParams/APIParams.h"
 
 namespace Margin {
-    nlohmann::json getPrice(
+    double getPrice(
             const APIParams &apiParams,
             const std::string &symbol
     );

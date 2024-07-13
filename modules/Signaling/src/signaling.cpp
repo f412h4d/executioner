@@ -9,8 +9,8 @@
 #include <string>
 #include <cstdio>
 
-#define EXEC_DELAY 5
-#define CANCEL_DELAY 1000000
+#define EXEC_DELAY 15
+#define CANCEL_DELAY 30
 
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
@@ -112,14 +112,17 @@ namespace Signaling {
         return signals;
     }
 
-    void mockSignal(const std::string &filePath, const APIParams &apiParams) {
+    void mockSignal(const APIParams &apiParams) {
         SignalQueue signalQueue;
         std::string prev_datetime = "";
 
         while (true) {
-            std::this_thread::sleep_for(std::chrono::minutes(1));
+            std::this_thread::sleep_for(std::chrono::seconds(60));
 
             auto [datetime, signal] = fetchSignal();
+
+            std::cout << "Signal -> " << signal << std::endl;
+            std::cout << "Datetime -> " << datetime << std::endl;
 
             if (signal == 0) {
                 std::cout << "Signaling received: DO NOTHING" << std::endl;
@@ -158,9 +161,13 @@ namespace Signaling {
                             double slPrice;
                             double calculated_price;
 
-                            calculated_price = 56985;
-                            tpPrice = calculated_price + 100; // Example TP price
-                            slPrice = calculated_price - 100; // Example SL price
+                            auto price = Margin::getPrice(apiParams, "BTCUSDT");
+//                            calculated_price = std::ceil(price * 0.9  * 100.0) / 100.0;
+//                            tpPrice = std::ceil(price * 1.1  * 100.0) / 100.0;
+//                            slPrice = std::ceil(price * 0.7  * 100.0) / 100.0;
+                            calculated_price = price - 100;
+                            tpPrice = price + 500;
+                            slPrice = price - 800;
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -260,9 +267,13 @@ namespace Signaling {
                             double tpPrice;
                             double slPrice;
                             double calculated_price;
-                            calculated_price = 80000;
-                            slPrice = 71000.0; // Example TP price
-                            tpPrice = 45000.0; // Example SL price
+                            auto price = Margin::getPrice(apiParams, "BTCUSDT");
+//                            calculated_price = std::ceil(price * 1.1  * 100.0) / 100.0;
+//                            tpPrice = std::ceil(price * 0.9  * 100.0) / 100.0;
+//                            slPrice = std::ceil(price * 1.3  * 100.0) / 100.0;
+                            calculated_price = price + 100;
+                            tpPrice = price - 500;
+                            slPrice = price + 800;
 
                             OrderInput order(
                                     "BTCUSDT",

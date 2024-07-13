@@ -5,6 +5,7 @@
 #include "signaling.h"
 #include "APIParams.h"
 #include "modules/TimedEventQueue/headers/SignalQueue.h"
+#include "margin.h"
 
 
 int main() {
@@ -23,8 +24,7 @@ int main() {
             5000,
             true
     );
-
-    Signaling::mockSignal(exeDir + "/../signals.txt", apiParams);
+    Signaling::mockSignal(apiParams);
 
     return 0;
 }
