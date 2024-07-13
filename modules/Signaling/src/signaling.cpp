@@ -5,13 +5,25 @@
 
 #include <iostream>
 #include <fstream>
-#include <thread>
 #include <vector>
 #include <string>
 #include <cstdio>
 
 #define EXEC_DELAY 5
 #define CANCEL_DELAY 1000000
+
+std::string exec(const char* cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
 
 bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
@@ -57,6 +69,23 @@ bool prepareForOrder(const APIParams &apiParams) {
 
 
 namespace Signaling {
+    std::pair<std::string, int> fetchSignal() {
+        std::string output = exec("../run_gsutil.sh");
+        std::istringstream iss(output);
+        std::string datetime, signal_str;
+        int signal = 0;
+
+        if (std::getline(iss, datetime, ',') && std::getline(iss, signal_str)) {
+            try {
+                signal = std::stoi(signal_str);
+            } catch (const std::invalid_argument& e) {
+                std::cerr << "Invalid signal value: " << signal_str << std::endl;
+            }
+        }
+
+        return {datetime, signal};
+    }
+
     std::vector<int> readSignalsFromFile(const std::string &filePath) {
         std::vector<int> signals;
         std::ifstream file(filePath);
@@ -85,30 +114,40 @@ namespace Signaling {
 
     void mockSignal(const std::string &filePath, const APIParams &apiParams) {
         SignalQueue signalQueue;
+        std::string prev_datetime = "";
 
-        std::vector<int> signals = readSignalsFromFile(filePath);
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::minutes(1));
 
-        for (size_t i = 0; i < signals.size(); ++i) {
-            int signal = signals[i];
-            bool isLastSignal = (i == signals.size() - 1);
+            auto [datetime, signal] = fetchSignal();
 
-            if (signal == 0 && !isLastSignal) {
+            if (signal == 0) {
                 std::cout << "Signaling received: DO NOTHING" << std::endl;
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-
                 continue;
             }
 
+            if (datetime.empty()) {
+                std::cout << "No valid signal received." << std::endl;
+                continue;
+            }
+
+            if (datetime == prev_datetime) {
+                std::cout << "Signal datetime has not changed. Skipping execution." << std::endl;
+                continue;
+            }
+
+            prev_datetime = datetime;
 
             if (signal == 1) {
                 std::cout << "Signaling received: BUY" << std::endl;
 
-                std::cout << "Signal #" + std::to_string(i) + " is going to be executed in " +
+                std::cout << "Signal " << signal << " is going to be executed in " +
                              std::to_string(EXEC_DELAY) +
                              " seconds" << std::endl;
+
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
-                        "Signal #" + std::to_string(i) + " is executed.",
+                        "Signal is executed.",
                         [&apiParams]() {
                             bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
@@ -169,11 +208,11 @@ namespace Signaling {
                 );
 
 
-                std::cout << "Signal #" + std::to_string(i) + " Added to queue to be canceled" << std::endl;
+                std::cout << "Signal #" + std::to_string(signal) + " Added to queue to be canceled" << std::endl;
                 // TODO maybe define cancel queue?
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(CANCEL_DELAY),
-                        "Trying to cancel the order number " + std::to_string(i),
+                        "Trying to cancel the order " + std::to_string(signal),
                         [&apiParams]() {
                             std::string notional;
                             auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
@@ -205,13 +244,13 @@ namespace Signaling {
             } else if (signal == -1) {
                 std::cout << "Signaling received: SELL" << std::endl;
 
-                std::cout << "Signal #" + std::to_string(i) +
+                std::cout << "Signal #" + std::to_string(signal) +
                              " is going to be canceled in " +
                              std::to_string(CANCEL_DELAY) + "seconds." << std::endl;
 
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
-                        "Signal #" + std::to_string(i) + " is executed.",
+                        "Signal #" + std::to_string(signal) + " is executed.",
                         [&apiParams]() {
                             bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
@@ -270,14 +309,14 @@ namespace Signaling {
                         }
                 );
 
-                std::cout << "Signal #" + std::to_string(i) +
+                std::cout << "Signal #" + std::to_string(signal) +
                              " is going to be canceled in " +
                              std::to_string(CANCEL_DELAY) + "seconds.";
 
                 // TODO maybe define cancel queue?
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(CANCEL_DELAY),
-                        "Signal #" + std::to_string(i) + " is executed.",
+                        "Signal #" + std::to_string(signal) + " is executed.",
                         [&apiParams]() {
 
                             std::string notional;
@@ -306,19 +345,6 @@ namespace Signaling {
                             }
                         }
                 );
-            }
-
-            // Mimic a delay of 2 seconds
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-
-            // Check if this is the last signal
-            if (isLastSignal) {
-                std::cout << "This was the last signal." << std::endl;
-
-                std::this_thread::sleep_for(std::chrono::seconds(180));
-                signalQueue.stop();
-
-                // Add any additional logic to handle the last signal here
             }
         }
     }
