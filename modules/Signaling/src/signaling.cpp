@@ -117,8 +117,6 @@ namespace Signaling {
         std::string prev_datetime = "";
 
         while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(60));
-
             auto [datetime, signal] = fetchSignal();
 
             std::cout << "Signal -> " << signal << std::endl;
@@ -166,8 +164,8 @@ namespace Signaling {
 //                            tpPrice = std::ceil(price * 1.1  * 100.0) / 100.0;
 //                            slPrice = std::ceil(price * 0.7  * 100.0) / 100.0;
                             calculated_price = price - 100;
-                            tpPrice = price + 500;
-                            slPrice = price - 800;
+                            tpPrice = price + 1000;
+                            slPrice = price - 1100;
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -272,8 +270,8 @@ namespace Signaling {
 //                            tpPrice = std::ceil(price * 0.9  * 100.0) / 100.0;
 //                            slPrice = std::ceil(price * 1.3  * 100.0) / 100.0;
                             calculated_price = price + 100;
-                            tpPrice = price - 500;
-                            slPrice = price + 800;
+                            tpPrice = price + 1100;
+                            slPrice = price - 1000;
 
                             OrderInput order(
                                     "BTCUSDT",
