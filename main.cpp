@@ -27,7 +27,8 @@ int main() {
             5000,
             env["TESTNET"] == "TRUE"
     );
-    Signaling::mockSignal(apiParams);
+    Margin::getPrice(apiParams, "BTCUSDT");
+//    Signaling::mockSignal(apiParams);
 
     return 0;
 }
