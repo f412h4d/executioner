@@ -14,21 +14,34 @@ void printMapElements(const std::map<std::string, std::string>& env) {
     }
 }
 
+long getServerTime() {
+    cpr::Response r = cpr::Get(cpr::Url{"https://fapi.binance.com/fapi/v1/time"});
+    auto json = nlohmann::json::parse(r.text);
+    return json["serverTime"];
+}
+
 int main() {
+    long serverTime = getServerTime();
+    long localTime = static_cast<long>(std::time(nullptr) * 1000);
+    std::cout << "Server Time: " << serverTime << std::endl;
+    std::cout << "Local Time: " << localTime << std::endl;
+    std::cout << "Time Difference: " << localTime - serverTime << " ms" << std::endl;
+
+
     std::string exePath = Utils::getExecutablePath();
     std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
     std::string envFilePath = exeDir + "/../.env";
     std::map<std::string, std::string> env = Utils::loadEnvFile(envFilePath);
 
-    printMapElements(env);
+//    printMapElements(env);
 
     bool useTestnet = (env["TESTNET"] == "TRUE");
     std::string apiKey = useTestnet ? env["TESTNET_API_KEY"] : env["API_KEY"];
     std::string apiSecret = useTestnet ? env["TESTNET_API_SECRET"] : env["API_SECRET"];
 
-    std::cout << env["TESTNET"] << std::endl;
-    std::cout << env["API_KEY"] << std::endl;
-    std::cout << env["API_SECRET"] << std::endl;
+//    std::cout << env["TESTNET"] << std::endl;
+//    std::cout << env["API_KEY"] << std::endl;
+//    std::cout << env["API_SECRET"] << std::endl;
 
     APIParams testApiParams(
             env["TESTNET_API_KEY"],

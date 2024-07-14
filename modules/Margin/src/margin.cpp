@@ -69,6 +69,11 @@ namespace Margin {
         std::string signature = hmac_sha256(apiParams.apiSecret, params);
         std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + url_encode(signature);
 
+        // Log details
+        std::cout << "URL: " << url << std::endl;
+        std::cout << "Params: " << params << std::endl;
+        std::cout << "Signature: " << signature << std::endl;
+
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
         std::cout << "Response Code: " << r.status_code << std::endl;
         std::cout << "Response Text: " << r.text << std::endl;
