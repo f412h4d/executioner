@@ -70,6 +70,9 @@ namespace Margin {
         std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + url_encode(signature);
 
         // Log details
+        std::cout << "Base URL: " << baseUrl << std::endl;
+        std::cout << "API Key Length: " << apiParams.apiKey.length() << std::endl;
+        std::cout << "API Secret Length: " << apiParams.apiSecret.length() << std::endl;
         std::cout << "URL: " << url << std::endl;
         std::cout << "Params: " << params << std::endl;
         std::cout << "Signature: " << signature << std::endl;
