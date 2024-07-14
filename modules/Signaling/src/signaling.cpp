@@ -12,12 +12,10 @@
 
 #define EXEC_DELAY 15
 #define CANCEL_DELAY 30
-#define BUY_CALC_PRICE_PERCENTAGE 0.9
-#define BUY_TP_PRICE_PERCENTAGE 1.1
-#define BUY_SL_PRICE_PERCENTAGE 0.7
-#define SHORT_CALC_PRICE_PERCENTAGE 1.1
-#define SHORT_TP_PRICE_PERCENTAGE 0.9
-#define SHORT_SL_PRICE_PERCENTAGE 1.3
+#define CALC_PRICE_PERCENTAGE (-0.01)
+#define TP_PRICE_PERCENTAGE 0.014
+#define SL_PRICE_PERCENTAGE (-0.012)
+
 #define TICK_SIZE 0.1
 
 bool prepareForOrder(const APIParams &apiParams) {
@@ -120,16 +118,16 @@ namespace Signaling {
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
                         "Signal is executed.",
-                        [&apiParams]() {
+                        [&apiParams, signal]() {
                             bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
                                 return;
                             }
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = roundToTickSize(price * BUY_CALC_PRICE_PERCENTAGE, TICK_SIZE);
-                            double tpPrice = roundToTickSize(price * BUY_TP_PRICE_PERCENTAGE, TICK_SIZE);
-                            double slPrice = roundToTickSize(price * BUY_SL_PRICE_PERCENTAGE, TICK_SIZE);
+                            double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double tpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double slPrice = roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -217,16 +215,16 @@ namespace Signaling {
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
                         "Signal #" + std::to_string(signal) + " is executed.",
-                        [&apiParams]() {
+                        [&apiParams, signal]() {
                             bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
                                 return;
                             }
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = roundToTickSize(price * SHORT_CALC_PRICE_PERCENTAGE, TICK_SIZE);
-                            double tpPrice = roundToTickSize(price * SHORT_TP_PRICE_PERCENTAGE, TICK_SIZE);
-                            double slPrice = roundToTickSize(price * SHORT_SL_PRICE_PERCENTAGE, TICK_SIZE);
+                            double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double tpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double slPrice = roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
