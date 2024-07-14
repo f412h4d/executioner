@@ -136,7 +136,7 @@ namespace Signaling {
                                     "BUY",
                                     "LIMIT",
                                     "GTC",
-                                    0.01,
+                                    0.005,
                                     calculated_price
                             );
 
@@ -233,7 +233,7 @@ namespace Signaling {
                                     "SELL",
                                     "LIMIT",
                                     "GTC",
-                                    0.01,
+                                    0.005,
                                     calculated_price
                             );
 
