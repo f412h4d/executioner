@@ -1,43 +1,12 @@
 #include "../headers/margin.h"
 #include "../../Utils/headers/utils.h"
 #include "cpr/cpr.h"
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
 #include <iostream>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
 #include "nlohmann/json.hpp"
 
 
 namespace Margin {
-    std::string hmac_sha256(const std::string& key, const std::string& data) {
-        unsigned char* digest;
-        digest = HMAC(EVP_sha256(), key.c_str(), key.length(), (unsigned char*)data.c_str(), data.length(), nullptr, nullptr);
-
-        char mdString[SHA256_DIGEST_LENGTH*2+1];
-        for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-            sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-
-        return std::string(mdString);
-    }
-
-    std::string url_encode(const std::string &value) {
-        std::ostringstream escaped;
-        escaped.fill('0');
-        escaped << std::hex;
-
-        for (char c : value) {
-            if (isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == '.' || c == '~') {
-                escaped << c;
-            } else {
-                escaped << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
-            }
-        }
-
-        return escaped.str();
-    }
-
     double getPrice(
             const APIParams &apiParams,
             const std::string &symbol
@@ -66,8 +35,8 @@ namespace Margin {
             params += "&symbol=" + symbol;
         }
 
-        std::string signature = hmac_sha256(apiParams.apiSecret, params);
-        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + url_encode(signature);
+        std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
+        std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
 
         // Log details
         std::cout << "Base URL: " << baseUrl << std::endl;
