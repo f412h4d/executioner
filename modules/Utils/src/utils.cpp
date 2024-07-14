@@ -8,11 +8,31 @@
 #include <iomanip>
 #include <iostream>
 
+#include <vector>
+#include <string>
+#include <cstdio>
+#include <memory>
+
 namespace Utils {
     void printMapElements(const std::map<std::string, std::string> &env) {
         for (const auto &pair: env) {
             std::cout << pair.first << ": " << pair.second << std::endl;
         }
+    }
+
+    std::string exec(const char* cmd) {
+        std::vector<char> buffer(128);
+        std::string result;
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+        if (!pipe) {
+            throw std::runtime_error("popen() failed!");
+        }
+
+        while (fgets(buffer.data(), static_cast<int>(std::min(buffer.size(), static_cast<std::size_t>(INT_MAX))), pipe.get()) != nullptr) {
+            result += buffer.data();
+        }
+
+        return result;
     }
 
     // ENV Utils

@@ -7,6 +7,8 @@
 namespace Utils {
     void printMapElements(const std::map<std::string, std::string> &env);
 
+    std::string exec(const char* cmd);
+
     std::string trimQuotes(const std::string &str);
 
     std::map<std::string, std::string> loadEnvFile(const std::string &filePath);

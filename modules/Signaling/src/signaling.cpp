@@ -1,6 +1,7 @@
 #include "signaling.h"
 #include "order.h"
 #include "margin.h"
+#include "utils.h"
 #include "../../TimedEventQueue/headers/SignalQueue.h"
 
 #include <iostream>
@@ -12,18 +13,6 @@
 #define EXEC_DELAY 15
 #define CANCEL_DELAY 30
 
-std::string exec(const char* cmd) {
-    std::array<char, 128> buffer;
-    std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) {
-        throw std::runtime_error("popen() failed!");
-    }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
-    return result;
-}
 
 bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
@@ -70,7 +59,7 @@ bool prepareForOrder(const APIParams &apiParams) {
 
 namespace Signaling {
     std::pair<std::string, int> fetchSignal() {
-        std::string output = exec("../run_gsutil.sh");
+        std::string output = Utils::exec("../run_gsutil.sh");
         std::istringstream iss(output);
         std::string datetime, signal_str;
         int signal = 0;
