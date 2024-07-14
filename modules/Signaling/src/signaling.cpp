@@ -18,7 +18,7 @@
 #define SHORT_CALC_PRICE_PERCENTAGE 1.1
 #define SHORT_TP_PRICE_PERCENTAGE 0.9
 #define SHORT_SL_PRICE_PERCENTAGE 1.3
-#define TICK_SIZE 0.01  // Define the tick size here
+#define TICK_SIZE 0.1
 
 bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
