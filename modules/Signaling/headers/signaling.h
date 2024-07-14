@@ -6,7 +6,7 @@
 #include "../../Order/models/APIParams/APIParams.h"
 
 namespace Signaling {
-    void mockSignal(const APIParams &apiParams);
+    [[noreturn]] void mockSignal(const APIParams &apiParams);
 
     std::vector<int> readSignalsFromFile(const std::string &filePath);
 }

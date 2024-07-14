@@ -5,7 +5,6 @@
 #include "../../TimedEventQueue/headers/SignalQueue.h"
 
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
 #include <cstdio>
@@ -19,6 +18,7 @@
 #define SHORT_CALC_PRICE_PERCENTAGE 1.1
 #define SHORT_TP_PRICE_PERCENTAGE 0.9
 #define SHORT_SL_PRICE_PERCENTAGE 1.3
+#define TICK_SIZE 0.01  // Define the tick size here
 
 bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
@@ -61,6 +61,10 @@ bool prepareForOrder(const APIParams &apiParams) {
     return true;
 }
 
+double roundToTickSize(double price, double tick_size) {
+    return std::round(price / tick_size) * tick_size;
+}
+
 namespace Signaling {
     std::pair<std::string, int> fetchSignal() {
         std::string output = Utils::exec("../run_gsutil.sh");
@@ -79,35 +83,9 @@ namespace Signaling {
         return {datetime, signal};
     }
 
-    std::vector<int> readSignalsFromFile(const std::string &filePath) {
-        std::vector<int> signals;
-        std::ifstream file(filePath);
-
-        if (!file.is_open()) {
-            std::cerr << "Unable to open file: " << filePath << std::endl;
-            return signals;
-        }
-
-        char ch;
-        while (file >> ch) {
-            if (ch == '1' || ch == '0') {
-                signals.push_back(ch - '0');
-            } else if (ch == '-') {
-                char next_ch;
-                file >> next_ch;
-                if (next_ch == '1') {
-                    signals.push_back(-1);
-                }
-            }
-        }
-
-        file.close();
-        return signals;
-    }
-
-    void mockSignal(const APIParams &apiParams) {
+    [[noreturn]] void mockSignal(const APIParams &apiParams) {
         SignalQueue signalQueue;
-        std::string prev_datetime = "";
+        std::string prev_datetime;
 
         while (true) {
             auto [datetime, signal] = fetchSignal();
@@ -149,9 +127,12 @@ namespace Signaling {
                             }
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = std::ceil(price * BUY_CALC_PRICE_PERCENTAGE * 100.0) / 100.0;
-                            double tpPrice = std::ceil(price * BUY_TP_PRICE_PERCENTAGE * 100.0) / 100.0;
-                            double slPrice = std::ceil(price * BUY_SL_PRICE_PERCENTAGE * 100.0) / 100.0;
+                            double calculated_price = roundToTickSize(
+                                    std::ceil(price * BUY_CALC_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
+                            double tpPrice = roundToTickSize(std::ceil(price * BUY_TP_PRICE_PERCENTAGE * 100.0) / 100.0,
+                                                             TICK_SIZE);
+                            double slPrice = roundToTickSize(std::ceil(price * BUY_SL_PRICE_PERCENTAGE * 100.0) / 100.0,
+                                                             TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -246,9 +227,12 @@ namespace Signaling {
                             }
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = std::ceil(price * SHORT_CALC_PRICE_PERCENTAGE * 100.0) / 100.0;
-                            double tpPrice = std::ceil(price * SHORT_TP_PRICE_PERCENTAGE * 100.0) / 100.0;
-                            double slPrice = std::ceil(price * SHORT_SL_PRICE_PERCENTAGE * 100.0) / 100.0;
+                            double calculated_price = roundToTickSize(
+                                    std::ceil(price * SHORT_CALC_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
+                            double tpPrice = roundToTickSize(
+                                    std::ceil(price * SHORT_TP_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
+                            double slPrice = roundToTickSize(
+                                    std::ceil(price * SHORT_SL_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
