@@ -39,10 +39,12 @@ nlohmann::json OrderService::createTriggerOrder(const APIParams &apiParams, cons
             "&timeInForce=" + triggerOrder.timeInForce +
             "&quantity=" + std::to_string(triggerOrder.quantity) + "&recvWindow=" +
             std::to_string(apiParams.recvWindow) +
-            "&timestamp=" + std::to_string(timestamp);
-
-    params +=
+            "&timestamp=" + std::to_string(timestamp) +
             "&stopPrice=" + std::to_string(triggerOrder.stopPrice) + "&price=" + std::to_string(triggerOrder.stopPrice);
+
+    if (triggerOrder.reduceOnly) {
+        params += "&reduceOnly=true";
+    }
 
     std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
     std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);

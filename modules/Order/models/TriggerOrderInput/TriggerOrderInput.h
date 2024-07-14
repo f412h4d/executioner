@@ -7,6 +7,7 @@
 class TriggerOrderInput : public OrderInput {
 public:
     double stopPrice;
+    bool reduceOnly;
 
     TriggerOrderInput(
             const std::string &symbol,
@@ -15,7 +16,8 @@ public:
             const std::string &timeInForce,
             const double &quantity,
             const double &price,
-            const double &stopPrice
+            const double &stopPrice,
+            const bool &reduceOnly = false
     );
 };
 

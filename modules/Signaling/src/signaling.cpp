@@ -153,7 +153,8 @@ namespace Signaling {
                                         "GTC",
                                         orig_qty,
                                         tpPrice,
-                                        tpPrice
+                                        tpPrice,
+                                        true
                                 );
                                 auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
                                 std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
@@ -166,7 +167,8 @@ namespace Signaling {
                                         "GTC",
                                         orig_qty,
                                         slPrice,
-                                        slPrice
+                                        slPrice,
+                                        true
                                 );
                                 auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
                                 std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
@@ -250,7 +252,8 @@ namespace Signaling {
                                         "GTC",
                                         orig_qty,
                                         tpPrice,
-                                        tpPrice
+                                        tpPrice,
+                                        true
                                 );
                                 auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
                                 std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
@@ -263,7 +266,8 @@ namespace Signaling {
                                         "GTC",
                                         orig_qty,
                                         slPrice,
-                                        slPrice
+                                        slPrice,
+                                        true
                                 );
                                 auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
                                 std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
@@ -280,7 +284,6 @@ namespace Signaling {
                         TIME::now() + std::chrono::seconds(CANCEL_DELAY),
                         "Signal #" + std::to_string(signal) + " is executed.",
                         [&apiParams]() {
-
                             std::string notional;
                             auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
                             if (positions_response.is_array() && positions_response[0].contains("notional")) {

@@ -7,7 +7,9 @@ TriggerOrderInput::TriggerOrderInput(
         const std::string &timeInForce,
         const double &quantity,
         const double &price,
-        const double &stopPrice
+        const double &stopPrice,
+        const bool &reduceOnly
 ) :
         OrderInput(symbol, side, type, timeInForce, quantity, price),
-        stopPrice(stopPrice) {}
+        stopPrice(stopPrice),
+        reduceOnly(reduceOnly){}
