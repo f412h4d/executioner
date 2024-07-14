@@ -13,7 +13,7 @@
 #define EXEC_DELAY 15
 #define CANCEL_DELAY 315
 #define CALC_PRICE_PERCENTAGE (-0.01)
-#define TP_PRICE_PERCENTAGE 0.01
+#define TP_PRICE_PERCENTAGE 0.02
 #define SL_PRICE_PERCENTAGE (-0.01)
 
 #define TICK_SIZE 0.1
@@ -149,7 +149,7 @@ namespace Signaling {
                                 TriggerOrderInput tpOrder(
                                         "BTCUSDT",
                                         "SELL",
-                                        "TAKE_PROFIT",
+                                        "TAKE_PROFIT_MARKET",
                                         "GTC",
                                         orig_qty,
                                         tpPrice,
@@ -163,7 +163,7 @@ namespace Signaling {
                                 TriggerOrderInput slOrder(
                                         "BTCUSDT",
                                         "SELL",
-                                        "STOP",
+                                        "STOP_MARKET",
                                         "GTC",
                                         orig_qty,
                                         slPrice,
@@ -248,7 +248,7 @@ namespace Signaling {
                                 TriggerOrderInput tpOrder(
                                         "BTCUSDT",
                                         "BUY",
-                                        "TAKE_PROFIT",
+                                        "TAKE_PROFIT_MARKET",
                                         "GTC",
                                         orig_qty,
                                         tpPrice,
@@ -262,7 +262,7 @@ namespace Signaling {
                                 TriggerOrderInput slOrder(
                                         "BTCUSDT",
                                         "BUY",
-                                        "STOP",
+                                        "STOP_MARKET",
                                         "GTC",
                                         orig_qty,
                                         slPrice,
