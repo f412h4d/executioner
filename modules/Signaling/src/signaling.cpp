@@ -9,10 +9,16 @@
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <cmath>
 
 #define EXEC_DELAY 15
 #define CANCEL_DELAY 30
-
+#define BUY_CALC_PRICE_PERCENTAGE 0.9
+#define BUY_TP_PRICE_PERCENTAGE 1.1
+#define BUY_SL_PRICE_PERCENTAGE 0.7
+#define SHORT_CALC_PRICE_PERCENTAGE 1.1
+#define SHORT_TP_PRICE_PERCENTAGE 0.9
+#define SHORT_SL_PRICE_PERCENTAGE 1.3
 
 bool prepareForOrder(const APIParams &apiParams) {
     std::string notional;
@@ -47,15 +53,13 @@ bool prepareForOrder(const APIParams &apiParams) {
     if (array_length == 1) {
         std::cout << "There is 1 opening orders, cleaning up!!" << std::endl;
         auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-        std::cout << "Cancel All Orders Response: " << response.dump(4)
-                  << std::endl;
+        std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
 
         return true;
     }
 
     return true;
 }
-
 
 namespace Signaling {
     std::pair<std::string, int> fetchSignal() {
@@ -67,7 +71,7 @@ namespace Signaling {
         if (std::getline(iss, datetime, ',') && std::getline(iss, signal_str)) {
             try {
                 signal = std::stoi(signal_str);
-            } catch (const std::invalid_argument& e) {
+            } catch (const std::invalid_argument &e) {
                 std::cerr << "Invalid signal value: " << signal_str << std::endl;
             }
         }
@@ -132,8 +136,8 @@ namespace Signaling {
                 std::cout << "Signaling received: BUY" << std::endl;
 
                 std::cout << "Signal " << signal << " is going to be executed in " +
-                             std::to_string(EXEC_DELAY) +
-                             " seconds" << std::endl;
+                                                    std::to_string(EXEC_DELAY) +
+                                                    " seconds" << std::endl;
 
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
@@ -144,17 +148,10 @@ namespace Signaling {
                                 return;
                             }
 
-                            double tpPrice;
-                            double slPrice;
-                            double calculated_price;
-
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-//                            calculated_price = std::ceil(price * 0.9  * 100.0) / 100.0;
-//                            tpPrice = std::ceil(price * 1.1  * 100.0) / 100.0;
-//                            slPrice = std::ceil(price * 0.7  * 100.0) / 100.0;
-                            calculated_price = price - 100;
-                            tpPrice = price + 1000;
-                            slPrice = price - 1100;
+                            double calculated_price = std::ceil(price * BUY_CALC_PRICE_PERCENTAGE * 100.0) / 100.0;
+                            double tpPrice = std::ceil(price * BUY_TP_PRICE_PERCENTAGE * 100.0) / 100.0;
+                            double slPrice = std::ceil(price * BUY_SL_PRICE_PERCENTAGE * 100.0) / 100.0;
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -200,7 +197,6 @@ namespace Signaling {
                             }
                         }
                 );
-
 
                 std::cout << "Signal #" + std::to_string(signal) + " Added to queue to be canceled" << std::endl;
                 // TODO maybe define cancel queue?
@@ -226,11 +222,9 @@ namespace Signaling {
                             auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
                             if (open_orders_response.is_array() && !open_orders_response.empty()) {
                                 auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-                                std::cout << "Cancel All Orders Response: " << response.dump(4)
-                                          << std::endl;
+                                std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
                             } else {
-                                std::cerr << "Unexpected response format: "
-                                          << open_orders_response.dump(4)
+                                std::cerr << "Unexpected response format: " << open_orders_response.dump(4)
                                           << std::endl;
                             }
                         }
@@ -240,7 +234,7 @@ namespace Signaling {
 
                 std::cout << "Signal #" + std::to_string(signal) +
                              " is going to be canceled in " +
-                             std::to_string(CANCEL_DELAY) + "seconds." << std::endl;
+                             std::to_string(CANCEL_DELAY) + " seconds." << std::endl;
 
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
@@ -251,20 +245,14 @@ namespace Signaling {
                                 return;
                             }
 
-                            double tpPrice;
-                            double slPrice;
-                            double calculated_price;
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-//                            calculated_price = std::ceil(price * 1.1  * 100.0) / 100.0;
-//                            tpPrice = std::ceil(price * 0.9  * 100.0) / 100.0;
-//                            slPrice = std::ceil(price * 1.3  * 100.0) / 100.0;
-                            calculated_price = price + 100;
-                            tpPrice = price + 1100;
-                            slPrice = price - 1000;
+                            double calculated_price = std::ceil(price * SHORT_CALC_PRICE_PERCENTAGE * 100.0) / 100.0;
+                            double tpPrice = std::ceil(price * SHORT_TP_PRICE_PERCENTAGE * 100.0) / 100.0;
+                            double slPrice = std::ceil(price * SHORT_SL_PRICE_PERCENTAGE * 100.0) / 100.0;
 
                             OrderInput order(
                                     "BTCUSDT",
-                                    "BUY",
+                                    "SELL",
                                     "LIMIT",
                                     "GTC",
                                     0.01,
@@ -281,7 +269,7 @@ namespace Signaling {
                                 // Take Profit Order
                                 TriggerOrderInput tpOrder(
                                         "BTCUSDT",
-                                        "SELL",
+                                        "BUY",
                                         "TAKE_PROFIT",
                                         "GTC",
                                         orig_qty,
@@ -294,7 +282,7 @@ namespace Signaling {
                                 // Stop Loss Order
                                 TriggerOrderInput slOrder(
                                         "BTCUSDT",
-                                        "SELL",
+                                        "BUY",
                                         "STOP",
                                         "GTC",
                                         orig_qty,
@@ -309,7 +297,7 @@ namespace Signaling {
 
                 std::cout << "Signal #" + std::to_string(signal) +
                              " is going to be canceled in " +
-                             std::to_string(CANCEL_DELAY) + "seconds.";
+                             std::to_string(CANCEL_DELAY) + " seconds.";
 
                 // TODO maybe define cancel queue?
                 signalQueue.addEvent(
@@ -334,11 +322,9 @@ namespace Signaling {
                             auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
                             if (open_orders_response.is_array() && !open_orders_response.empty()) {
                                 auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-                                std::cout << "Cancel All Orders Response: " << response.dump(4)
-                                          << std::endl;
+                                std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
                             } else {
-                                std::cerr << "Unexpected response format: "
-                                          << open_orders_response.dump(4)
+                                std::cerr << "Unexpected response format: " << open_orders_response.dump(4)
                                           << std::endl;
                             }
                         }
