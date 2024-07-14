@@ -7,8 +7,6 @@
 
 namespace Signaling {
     [[noreturn]] void mockSignal(const APIParams &apiParams);
-
-    std::vector<int> readSignalsFromFile(const std::string &filePath);
 }
 
 #endif // SIGNALING_H
