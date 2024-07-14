@@ -126,8 +126,8 @@ namespace Signaling {
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
                             double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double tpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double slPrice = roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -223,8 +223,8 @@ namespace Signaling {
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
                             double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double tpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double slPrice = roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                            double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
