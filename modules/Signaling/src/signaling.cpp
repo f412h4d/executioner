@@ -127,12 +127,9 @@ namespace Signaling {
                             }
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = roundToTickSize(
-                                    std::ceil(price * BUY_CALC_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
-                            double tpPrice = roundToTickSize(std::ceil(price * BUY_TP_PRICE_PERCENTAGE * 100.0) / 100.0,
-                                                             TICK_SIZE);
-                            double slPrice = roundToTickSize(std::ceil(price * BUY_SL_PRICE_PERCENTAGE * 100.0) / 100.0,
-                                                             TICK_SIZE);
+                            double calculated_price = roundToTickSize(price * BUY_CALC_PRICE_PERCENTAGE, TICK_SIZE);
+                            double tpPrice = roundToTickSize(price * BUY_TP_PRICE_PERCENTAGE, TICK_SIZE);
+                            double slPrice = roundToTickSize(price * BUY_SL_PRICE_PERCENTAGE, TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
@@ -227,12 +224,9 @@ namespace Signaling {
                             }
 
                             auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = roundToTickSize(
-                                    std::ceil(price * SHORT_CALC_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
-                            double tpPrice = roundToTickSize(
-                                    std::ceil(price * SHORT_TP_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
-                            double slPrice = roundToTickSize(
-                                    std::ceil(price * SHORT_SL_PRICE_PERCENTAGE * 100.0) / 100.0, TICK_SIZE);
+                            double calculated_price = roundToTickSize(price * SHORT_CALC_PRICE_PERCENTAGE, TICK_SIZE);
+                            double tpPrice = roundToTickSize(price * SHORT_TP_PRICE_PERCENTAGE, TICK_SIZE);
+                            double slPrice = roundToTickSize(price * SHORT_SL_PRICE_PERCENTAGE, TICK_SIZE);
 
                             OrderInput order(
                                     "BTCUSDT",
