@@ -52,10 +52,6 @@ nlohmann::json OrderService::createTriggerOrder(const APIParams &apiParams, cons
         params += "&reduceOnly=true";
     }
 
-    if (!triggerOrder.priceType.empty()) {
-        params += "&workingType=" + triggerOrder.priceType;
-    }
-
     std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
     std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
 

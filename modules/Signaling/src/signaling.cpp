@@ -28,7 +28,7 @@ bool prepareForOrder(const APIParams &apiParams) {
 
     auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
     if (positions_response.is_array() && positions_response[0].contains("notional")) {
-        notional = positions_response[0]["notional"];
+        notional = positions_response[0]["notional"].get<std::string>();
     } else {
         std::cerr << "Notional not found in the response" << std::endl;
         return false;
@@ -53,7 +53,7 @@ bool prepareForOrder(const APIParams &apiParams) {
     }
 
     if (array_length == 1) {
-        std::cout << "There is 1 opening orders, cleaning up!!" << std::endl;
+        std::cout << "There is 1 opening order, cleaning up!!" << std::endl;
         auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
         std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
 
@@ -69,32 +69,28 @@ double roundToTickSize(double price, double tick_size) {
 
 void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, double orig_qty, double tpPrice,
                         double slPrice) {
-    // Take Profit Market Order
     TriggerOrderInput tpOrder(
             symbol,
             "SELL",
             "TAKE_PROFIT_MARKET",
-            "",
+            "GTC",
             orig_qty,
-            0.0, // Price is not needed for MARKET orders
             tpPrice,
-            true,
-            "LAST" // Price type for TP orders
+            tpPrice,
+            true
     );
     auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
     std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
 
-    // Stop Loss Market Order
     TriggerOrderInput slOrder(
             symbol,
             "SELL",
             "STOP_MARKET",
-            "",
+            "GTC",
             orig_qty,
-            0.0, // Price is not needed for MARKET orders
             slPrice,
-            true,
-            "MARK" // Price type for SL orders
+            slPrice,
+            true
     );
     auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
     std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
