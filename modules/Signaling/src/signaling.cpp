@@ -11,9 +11,9 @@
 #include <cmath>
 
 #define EXEC_DELAY 3
-#define CANCEL_DELAY 315
-#define MONITOR_DELAY 3
-#define CALC_PRICE_PERCENTAGE (-0.01)
+#define CANCEL_DELAY 3003
+#define MONITOR_DELAY 1
+#define CALC_PRICE_PERCENTAGE (0)
 #define TP_PRICE_PERCENTAGE 0.02
 #define SL_PRICE_PERCENTAGE (-0.01)
 
