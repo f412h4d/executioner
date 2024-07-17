@@ -6,7 +6,7 @@
 #include "../../Order/models/APIParams/APIParams.h"
 
 namespace Signaling {
-    [[noreturn]] void mockSignal(const APIParams &apiParams);
+    [[noreturn]] void init(const APIParams &apiParams);
 }
 
 #endif // SIGNALING_H

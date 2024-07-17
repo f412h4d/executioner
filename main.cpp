@@ -27,7 +27,5 @@ int main() {
             5000,
             env["TESTNET"] == "TRUE"
     );
-    Signaling::mockSignal(apiParams);
-
-    return 0;
+    Signaling::init(apiParams);
 }

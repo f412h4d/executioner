@@ -97,8 +97,6 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, d
 }
 
 bool isOrderFilled(const APIParams &apiParams, const std::string &symbol, const std::string &orderId) {
-    // Implement logic to check if the order is filled
-    // You can use the order status endpoint to check the status
     std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
     std::string apiCall = "fapi/v1/order";
     long timestamp = static_cast<long>(std::time(nullptr) * 1000);
@@ -135,8 +133,80 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue, const APIParams &apiPara
     );
 }
 
+void processSignal(int signal, const APIParams &apiParams, SignalQueue &signalQueue, const std::string &side) {
+    std::cout << "Signaling received: " << side << std::endl;
+    std::cout << "Signal " << signal << " is going to be executed in " + std::to_string(EXEC_DELAY) + " seconds" << std::endl;
+
+    signalQueue.addEvent(
+            TIME::now() + std::chrono::seconds(EXEC_DELAY),
+            "Signal is executed.",
+            [&apiParams, &signalQueue, signal, side]() {
+                bool validConditions = prepareForOrder(apiParams);
+                if (!validConditions) {
+                    return;
+                }
+
+                auto price = Margin::getPrice(apiParams, "BTCUSDT");
+                double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+
+                OrderInput order(
+                        "BTCUSDT",
+                        side,
+                        "LIMIT",
+                        "GTC",
+                        0.005,
+                        calculated_price
+                );
+
+                auto order_response = OrderService::createOrder(apiParams, order);
+                std::cout << "Order Response: " << order_response.dump(4) << std::endl;
+
+                if (order_response.contains("orderId")) {
+                    // Extract the original quantity from the order response
+                    double orig_qty = std::stod(order_response["origQty"].get<std::string>());
+                    std::string orderId = order_response["orderId"].get<std::string>();
+
+                    // Monitor the main order and place TP and SL orders once it's filled
+                    monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", orderId, orig_qty, tpPrice, slPrice);
+                }
+            }
+    );
+
+    std::cout << "Signal #" + std::to_string(signal) + " Added to queue to be canceled" << std::endl;
+    signalQueue.addEvent(
+            TIME::now() + std::chrono::seconds(CANCEL_DELAY),
+            "Trying to cancel the order " + std::to_string(signal),
+            [&apiParams]() {
+                std::string notional;
+                auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
+                if (positions_response.is_array() && positions_response[0].contains("notional")) {
+                    notional = positions_response[0]["notional"];
+                } else {
+                    std::cerr << "Notional not found in the response" << std::endl;
+                    return;
+                }
+
+                if (notional != "0") {
+                    std::cout << "Canceling aborted due to open position\n";
+                    return;
+                }
+
+                std::cout << "\nCanceling:\n";
+                auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
+                if (open_orders_response.is_array() && !open_orders_response.empty()) {
+                    auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
+                    std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
+                } else {
+                    std::cerr << "Unexpected response format: " << open_orders_response.dump(4) << std::endl;
+                }
+            }
+    );
+}
+
 namespace Signaling {
-    std::pair<std::string, int> fetchSignal() {
+    std::pair<std::string, int> readSignal() {
         std::string output = Utils::exec("../run_gsutil.sh");
         std::istringstream iss(output);
         std::string datetime, signal_str;
@@ -153,12 +223,12 @@ namespace Signaling {
         return {datetime, signal};
     }
 
-    [[noreturn]] void mockSignal(const APIParams &apiParams) {
+    [[noreturn]] void init(const APIParams &apiParams) {
         SignalQueue signalQueue;
         std::string prev_datetime;
 
         while (true) {
-            auto [datetime, signal] = fetchSignal();
+            auto [datetime, signal] = readSignal();
 
             std::cout << "Signal -> " << signal << std::endl;
             std::cout << "Datetime -> " << datetime << std::endl;
@@ -181,159 +251,9 @@ namespace Signaling {
             prev_datetime = datetime;
 
             if (signal == 1) {
-                std::cout << "Signaling received: BUY" << std::endl;
-
-                std::cout << "Signal " << signal << " is going to be executed in " +
-                                                    std::to_string(EXEC_DELAY) +
-                                                    " seconds" << std::endl;
-
-                signalQueue.addEvent(
-                        TIME::now() + std::chrono::seconds(EXEC_DELAY),
-                        "Signal is executed.",
-                        [&apiParams, &signalQueue, signal]() {
-                            bool validConditions = prepareForOrder(apiParams);
-                            if (!validConditions) {
-                                return;
-                            }
-
-                            auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-
-                            OrderInput order(
-                                    "BTCUSDT",
-                                    "BUY",
-                                    "LIMIT",
-                                    "GTC",
-                                    0.005,
-                                    calculated_price
-                            );
-
-                            auto order_response = OrderService::createOrder(apiParams, order);
-                            std::cout << "Order Response: " << order_response.dump(4) << std::endl;
-
-                            if (order_response.contains("orderId")) {
-                                // Extract the original quantity from the order response
-                                double orig_qty = std::stod(order_response["origQty"].get<std::string>());
-                                std::string orderId = order_response["orderId"].get<std::string>();
-
-                                // Monitor the main order and place TP and SL orders once it's filled
-                                monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", orderId, orig_qty, tpPrice,
-                                                         slPrice);
-                            }
-                        }
-                );
-
-                std::cout << "Signal #" + std::to_string(signal) + " Added to queue to be canceled" << std::endl;
-                // TODO maybe define cancel queue?
-                signalQueue.addEvent(
-                        TIME::now() + std::chrono::seconds(CANCEL_DELAY),
-                        "Trying to cancel the order " + std::to_string(signal),
-                        [&apiParams]() {
-                            std::string notional;
-                            auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
-                            if (positions_response.is_array() && positions_response[0].contains("notional")) {
-                                notional = positions_response[0]["notional"];
-                            } else {
-                                std::cerr << "Notional not found in the response" << std::endl;
-                                return;
-                            }
-
-                            if (notional != "0") {
-                                std::cout << "Canceling aborted due to open position\n";
-                                return;
-                            }
-
-                            std::cout << "\nCanceling:\n";
-                            auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-                            if (open_orders_response.is_array() && !open_orders_response.empty()) {
-                                auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-                                std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
-                            } else {
-                                std::cerr << "Unexpected response format: " << open_orders_response.dump(4)
-                                          << std::endl;
-                            }
-                        }
-                );
+                processSignal(signal, apiParams, signalQueue, "BUY");
             } else if (signal == -1) {
-                std::cout << "Signaling received: SELL" << std::endl;
-
-                std::cout << "Signal #" + std::to_string(signal) +
-                             " is going to be canceled in " +
-                             std::to_string(CANCEL_DELAY) + " seconds." << std::endl;
-
-                signalQueue.addEvent(
-                        TIME::now() + std::chrono::seconds(EXEC_DELAY),
-                        "Signal #" + std::to_string(signal) + " is executed.",
-                        [&apiParams, &signalQueue, signal]() {
-                            bool validConditions = prepareForOrder(apiParams);
-                            if (!validConditions) {
-                                return;
-                            }
-
-                            auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                            double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                            double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-
-                            OrderInput order(
-                                    "BTCUSDT",
-                                    "SELL",
-                                    "LIMIT",
-                                    "GTC",
-                                    0.005,
-                                    calculated_price
-                            );
-
-                            auto order_response = OrderService::createOrder(apiParams, order);
-                            std::cout << "Order Response: " << order_response.dump(4) << std::endl;
-
-                            if (order_response.contains("orderId")) {
-                                // Extract the original quantity from the order response
-                                double orig_qty = std::stod(order_response["origQty"].get<std::string>());
-                                std::string orderId = order_response["orderId"].get<std::string>();
-
-                                // Monitor the main order and place TP and SL orders once it's filled
-                                monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", orderId, orig_qty, tpPrice,
-                                                         slPrice);
-                            }
-                        }
-                );
-
-                std::cout << "Signal #" + std::to_string(signal) +
-                             " is going to be canceled in " +
-                             std::to_string(CANCEL_DELAY) + " seconds.";
-
-                // TODO maybe define cancel queue?
-                signalQueue.addEvent(
-                        TIME::now() + std::chrono::seconds(CANCEL_DELAY),
-                        "Signal #" + std::to_string(signal) + " is executed.",
-                        [&apiParams]() {
-                            std::string notional;
-                            auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
-                            if (positions_response.is_array() && positions_response[0].contains("notional")) {
-                                notional = positions_response[0]["notional"];
-                            } else {
-                                std::cerr << "Notional not found in the response" << std::endl;
-                                return;
-                            }
-
-                            if (notional != "0") {
-                                std::cout << "Canceling aborted due to open position\n";
-                                return;
-                            }
-
-                            auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-                            if (open_orders_response.is_array() && !open_orders_response.empty()) {
-                                auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-                                std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
-                            } else {
-                                std::cerr << "Unexpected response format: " << open_orders_response.dump(4)
-                                          << std::endl;
-                            }
-                        }
-                );
+                processSignal(signal, apiParams, signalQueue, "SELL");
             }
         }
     }
