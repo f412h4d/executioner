@@ -16,7 +16,9 @@ nlohmann::json OrderService::createOrder(const APIParams &apiParams, const Order
             "&quantity=" + std::to_string(order.quantity) + "&recvWindow=" + std::to_string(apiParams.recvWindow) +
             "&timestamp=" + std::to_string(timestamp);
 
-    params += "&price=" + std::to_string(order.price);
+    if (order.type != "MARKET") {
+        params += "&price=" + std::to_string(order.price);
+    }
 
     std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
     std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
@@ -36,11 +38,15 @@ nlohmann::json OrderService::createTriggerOrder(const APIParams &apiParams, cons
 
     std::string params =
             "symbol=" + triggerOrder.symbol + "&side=" + triggerOrder.side + "&type=" + triggerOrder.type +
-            "&timeInForce=" + triggerOrder.timeInForce +
             "&quantity=" + std::to_string(triggerOrder.quantity) + "&recvWindow=" +
             std::to_string(apiParams.recvWindow) +
-            "&timestamp=" + std::to_string(timestamp) +
-            "&stopPrice=" + std::to_string(triggerOrder.stopPrice) + "&price=" + std::to_string(triggerOrder.stopPrice);
+            "&timestamp=" + std::to_string(timestamp);
+
+    if (triggerOrder.type == "STOP_MARKET" || triggerOrder.type == "TAKE_PROFIT_MARKET") {
+        params += "&stopPrice=" + std::to_string(triggerOrder.stopPrice);
+    } else {
+        params += "&price=" + std::to_string(triggerOrder.price) + "&stopPrice=" + std::to_string(triggerOrder.stopPrice);
+    }
 
     if (triggerOrder.reduceOnly) {
         params += "&reduceOnly=true";

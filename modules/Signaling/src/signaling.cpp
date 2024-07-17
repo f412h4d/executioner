@@ -69,26 +69,28 @@ double roundToTickSize(double price, double tick_size) {
 
 void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, double orig_qty, double tpPrice,
                         double slPrice) {
+    // Take Profit Market Order
     TriggerOrderInput tpOrder(
             symbol,
             "SELL",
-            "TAKE_PROFIT",
-            "GTC",
+            "TAKE_PROFIT_MARKET",
+            "",
             orig_qty,
-            tpPrice,
+            0.0, // Price is not needed for MARKET orders
             tpPrice,
             true
     );
     auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
     std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
 
+    // Stop Loss Market Order
     TriggerOrderInput slOrder(
             symbol,
             "SELL",
-            "STOP",
-            "GTC",
+            "STOP_MARKET",
+            "",
             orig_qty,
-            slPrice,
+            0.0, // Price is not needed for MARKET orders
             slPrice,
             true
     );
