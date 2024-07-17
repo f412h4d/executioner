@@ -3,6 +3,9 @@
 #include "margin.h"
 #include "utils.h"
 #include "../../TimedEventQueue/headers/SignalQueue.h"
+#include "cpr/cprtypes.h"
+#include "cpr/response.h"
+#include "cpr/cpr.h"
 
 #include <iostream>
 #include <vector>
@@ -12,6 +15,7 @@
 
 #define EXEC_DELAY 15
 #define CANCEL_DELAY 315
+#define MONITOR_DELAY 3
 #define CALC_PRICE_PERCENTAGE (-0.01)
 #define TP_PRICE_PERCENTAGE 0.02
 #define SL_PRICE_PERCENTAGE (-0.01)
@@ -61,6 +65,74 @@ bool prepareForOrder(const APIParams &apiParams) {
 
 double roundToTickSize(double price, double tick_size) {
     return std::round(price / tick_size) * tick_size;
+}
+
+void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, double orig_qty, double tpPrice,
+                        double slPrice) {
+    TriggerOrderInput tpOrder(
+            symbol,
+            "SELL",
+            "TAKE_PROFIT",
+            "GTC",
+            orig_qty,
+            tpPrice,
+            tpPrice,
+            true
+    );
+    auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
+    std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
+
+    TriggerOrderInput slOrder(
+            symbol,
+            "SELL",
+            "STOP",
+            "GTC",
+            orig_qty,
+            slPrice,
+            slPrice,
+            true
+    );
+    auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
+    std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
+}
+
+bool isOrderFilled(const APIParams &apiParams, const std::string &symbol, const std::string &orderId) {
+    // Implement logic to check if the order is filled
+    // You can use the order status endpoint to check the status
+    std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+    std::string apiCall = "fapi/v1/order";
+    long timestamp = static_cast<long>(std::time(nullptr) * 1000);
+
+    std::string params =
+            "symbol=" + symbol + "&orderId=" + orderId + "&recvWindow=" + std::to_string(apiParams.recvWindow) +
+            "&timestamp=" + std::to_string(timestamp);
+    std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
+    std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
+
+    cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
+    std::cout << "Order Status Response Code: " << r.status_code << std::endl;
+    std::cout << "Order Status Response Text: " << r.text << std::endl;
+
+    auto order_status_response = nlohmann::json::parse(r.text);
+    if (order_status_response.contains("status") && order_status_response["status"] == "FILLED") {
+        return true;
+    }
+    return false;
+}
+
+void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue, const APIParams &apiParams, const std::string &symbol,
+                              const std::string &orderId, double orig_qty, double tpPrice, double slPrice) {
+    signalQueue.addEvent(
+            TIME::now() + std::chrono::seconds(MONITOR_DELAY),
+            "Monitor Order Status",
+            [&signalQueue, apiParams, symbol, orderId, orig_qty, tpPrice, slPrice]() {
+                if (isOrderFilled(apiParams, symbol, orderId)) {
+                    placeTpAndSlOrders(apiParams, symbol, orig_qty, tpPrice, slPrice);
+                } else {
+                    monitorOrderAndPlaceTpSl(signalQueue, apiParams, symbol, orderId, orig_qty, tpPrice, slPrice);
+                }
+            }
+    );
 }
 
 namespace Signaling {
@@ -118,7 +190,7 @@ namespace Signaling {
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
                         "Signal is executed.",
-                        [&apiParams, signal]() {
+                        [&apiParams, &signalQueue, signal]() {
                             bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
                                 return;
@@ -144,34 +216,11 @@ namespace Signaling {
                             if (order_response.contains("orderId")) {
                                 // Extract the original quantity from the order response
                                 double orig_qty = std::stod(order_response["origQty"].get<std::string>());
+                                std::string orderId = order_response["orderId"].get<std::string>();
 
-                                // Take Profit Order
-                                TriggerOrderInput tpOrder(
-                                        "BTCUSDT",
-                                        "SELL",
-                                        "TAKE_PROFIT_MARKET",
-                                        "GTC",
-                                        orig_qty,
-                                        tpPrice,
-                                        tpPrice,
-                                        true
-                                );
-                                auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
-                                std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
-
-                                // Stop Loss Order
-                                TriggerOrderInput slOrder(
-                                        "BTCUSDT",
-                                        "SELL",
-                                        "STOP_MARKET",
-                                        "GTC",
-                                        orig_qty,
-                                        slPrice,
-                                        slPrice,
-                                        true
-                                );
-                                auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
-                                std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
+                                // Monitor the main order and place TP and SL orders once it's filled
+                                monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", orderId, orig_qty, tpPrice,
+                                                         slPrice);
                             }
                         }
                 );
@@ -217,7 +266,7 @@ namespace Signaling {
                 signalQueue.addEvent(
                         TIME::now() + std::chrono::seconds(EXEC_DELAY),
                         "Signal #" + std::to_string(signal) + " is executed.",
-                        [&apiParams, signal]() {
+                        [&apiParams, &signalQueue, signal]() {
                             bool validConditions = prepareForOrder(apiParams);
                             if (!validConditions) {
                                 return;
@@ -243,34 +292,11 @@ namespace Signaling {
                             if (order_response.contains("orderId")) {
                                 // Extract the original quantity from the order response
                                 double orig_qty = std::stod(order_response["origQty"].get<std::string>());
+                                std::string orderId = order_response["orderId"].get<std::string>();
 
-                                // Take Profit Order
-                                TriggerOrderInput tpOrder(
-                                        "BTCUSDT",
-                                        "BUY",
-                                        "TAKE_PROFIT_MARKET",
-                                        "GTC",
-                                        orig_qty,
-                                        tpPrice,
-                                        tpPrice,
-                                        true
-                                );
-                                auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
-                                std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
-
-                                // Stop Loss Order
-                                TriggerOrderInput slOrder(
-                                        "BTCUSDT",
-                                        "BUY",
-                                        "STOP_MARKET",
-                                        "GTC",
-                                        orig_qty,
-                                        slPrice,
-                                        slPrice,
-                                        true
-                                );
-                                auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
-                                std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
+                                // Monitor the main order and place TP and SL orders once it's filled
+                                monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", orderId, orig_qty, tpPrice,
+                                                         slPrice);
                             }
                         }
                 );
