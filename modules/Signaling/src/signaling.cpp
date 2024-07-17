@@ -48,14 +48,16 @@ bool prepareForOrder(const APIParams &apiParams) {
         return false;
     }
 
-    if (array_length == 1) {
-        std::cerr << "There is 1 open order, skipping." << std::endl;
-        return false;
-    }
+    if (array_length > 1) {
+        for (const auto& order : open_orders_response) {
+            if (order.contains("origType") && order["origType"] == "LIMIT") {
+                return false;
+            }
+        }
 
-    // TODO: add a condition for cleaning
-    //    auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-    //    std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
+        auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
+        std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
+    }
 
     return true;
 }
@@ -112,6 +114,7 @@ bool isOrderFilled(const APIParams &apiParams) {
 void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                               const APIParams &apiParams,
                               const std::string &symbol,
+                              const std::string &side,
                               double &orig_qty,
                               double &tpPrice,
                               double &slPrice,
@@ -120,7 +123,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
     signalQueue.addEvent(
             TIME::now() + std::chrono::seconds(MONITOR_DELAY),
             "Monitor Order Status",
-            [&apiParams, &symbol, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
+            [&apiParams, &symbol, &side, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
                 std::cout << "\n\n\nTP SL MONITOR Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n\n\n";
 
                 if (monitor_lock) {
@@ -132,7 +135,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                 if (isOrderFilled(apiParams)) {
                     std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n" << "Order Is FILLED Adding TP & SL\n";
                     monitor_lock = true;
-//                    placeTpAndSlOrders(apiParams, symbol, orig_qty, tpPrice, slPrice);
+                    placeTpAndSlOrders(apiParams, symbol, side, orig_qty, tpPrice, slPrice);
                 } else {
                     std::cout << "NOT FILLED Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n";
                     std::cout << "Not filled yet, will check again later.\n";
@@ -228,8 +231,6 @@ void processSignal(int signal,
                     last_tp_price = tpPrice;
                     last_sl_price = slPrice;
                     monitor_lock = false;
-
-                    placeTpAndSlOrders(apiParams, "BTCUSDT", side == "BUY" ? "SELL" : "BUY", orig_qty, tpPrice, slPrice);
                 }
             }
     );
@@ -268,13 +269,11 @@ namespace Signaling {
             std::cout << "Signal -> " << signal << std::endl;
             std::cout << "Datetime -> " << datetime << std::endl;
 
-//            if (!monitor_lock) {
-//                std::cout << "-> Adding new monitor event. \n";
-//                std::cout << "\n\n\nTP SL MONITOR Params:\n" << last_orig_qty << "\t" << last_tp_price << "\t" << last_sl_price << "\n\n\n";
-//
-//                monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", last_orig_qty, last_tp_price,
-//                                         last_sl_price, monitor_lock);
-//            }
+            if (!monitor_lock) {
+                std::cout << "-> Adding new monitor event. \n";
+                monitorOrderAndPlaceTpSl(signalQueue, apiParams, "BTCUSDT", signal == 1 ? "SELL":"BUY", last_orig_qty, last_tp_price,
+                                         last_sl_price, monitor_lock);
+            }
 
             if (signal == 0) {
                 std::cout << "Signaling received: DO NOTHING" << std::endl;
