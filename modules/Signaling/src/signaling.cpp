@@ -48,7 +48,7 @@ bool prepareForOrder(const APIParams &apiParams) {
         return false;
     }
 
-    if (array_length > 1) {
+    if (array_length >= 1) {
         for (const auto& order : open_orders_response) {
             if (order.contains("origType") && order["origType"] == "LIMIT") {
                 return false;
