@@ -78,7 +78,8 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, d
             orig_qty,
             0.0, // Price is not needed for MARKET orders
             tpPrice,
-            true
+            true,
+            "LAST" // Price type for TP orders
     );
     auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
     std::cout << "TP Order Response: " << tp_response.dump(4) << std::endl;
@@ -92,7 +93,8 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, d
             orig_qty,
             0.0, // Price is not needed for MARKET orders
             slPrice,
-            true
+            true,
+            "MARK" // Price type for SL orders
     );
     auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
     std::cout << "SL Order Response: " << sl_response.dump(4) << std::endl;
