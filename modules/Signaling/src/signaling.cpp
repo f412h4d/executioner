@@ -14,8 +14,8 @@
 #define CANCEL_DELAY 35 // Open Order Elimination
 #define MONITOR_DELAY 1
 #define CALC_PRICE_PERCENTAGE (0) // Entry Gap
-#define TP_PRICE_PERCENTAGE 0.0005
-#define SL_PRICE_PERCENTAGE (-0.0005)
+#define TP_PRICE_PERCENTAGE 0.0008
+#define SL_PRICE_PERCENTAGE (-0.0008)
 
 #define TICK_SIZE 0.1
 
@@ -68,7 +68,12 @@ double roundToTickSize(double price, double tick_size) {
 
 void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, const std::string &side, double orig_qty, double tpPrice,
                         double slPrice) {
-    std::cout << "Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice;
+    int signal = side == "BUY" ? 1:-1;
+    auto price = Margin::getPrice(apiParams, "BTCUSDT");
+    double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+    double newTpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+    double newSlPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+
 
     TriggerOrderInput tpOrder(
             symbol,
@@ -76,8 +81,8 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
             "TAKE_PROFIT_MARKET",
             "GTC",
             orig_qty,
-            tpPrice,
-            tpPrice,
+            newTpPrice,
+            newTpPrice,
             true
     );
     auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
@@ -89,8 +94,8 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
             "STOP_MARKET",
             "GTC",
             orig_qty,
-            slPrice,
-            slPrice,
+            newSlPrice,
+            newSlPrice,
             true
     );
     auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
