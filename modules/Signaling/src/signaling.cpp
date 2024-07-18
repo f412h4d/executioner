@@ -10,11 +10,11 @@
 #include <cstdio>
 #include <cmath>
 
-#define EXEC_DELAY 3
-#define CANCEL_DELAY 3003
+#define EXEC_DELAY 5 // Entry Time offset
+#define CANCEL_DELAY 10 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (0)
-#define TP_PRICE_PERCENTAGE 0.02
+#define CALC_PRICE_PERCENTAGE (0.002) // Entry Gap
+#define TP_PRICE_PERCENTAGE 0.01
 #define SL_PRICE_PERCENTAGE (-0.01)
 
 #define TICK_SIZE 0.1
