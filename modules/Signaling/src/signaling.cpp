@@ -243,29 +243,32 @@ namespace Signaling {
         std::string line, datetime, signal_str;
         int signal = 0;
 
-        if (std::getline(iss, line)) {
-            std::istringstream lineStream(line);
-            std::vector<std::string> columns;
-            std::string column;
+        std::string lastLine;
+        while (std::getline(iss, line)) {
+            lastLine = line;
+        }
 
-            while (std::getline(lineStream, column, ',')) {
-                columns.push_back(column);
-            }
+        std::istringstream lineStream(lastLine);
+        std::vector<std::string> columns;
+        std::string column;
 
-            if (!columns.empty()) {
-                datetime = columns.front();
-                signal_str = columns.back();
-                try {
-                    signal = std::stoi(signal_str);
-                } catch (const std::invalid_argument &e) {
-                    std::cerr << "Invalid signal value: " << signal_str << std::endl;
-                }
+        while (std::getline(lineStream, column, ',')) {
+            columns.push_back(column);
+        }
+
+        if (!columns.empty()) {
+            datetime = columns.front();
+            signal_str = columns.back();
+
+            try {
+                signal = std::stoi(signal_str);
+            } catch (const std::invalid_argument &e) {
+                std::cerr << "Invalid signal value: " << signal_str << std::endl;
             }
         }
 
         return {datetime, signal};
     }
-
     [[noreturn]] void init(const APIParams &apiParams) {
         SignalQueue signalQueue;
         std::string prev_datetime;
