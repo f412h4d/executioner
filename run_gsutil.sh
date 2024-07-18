@@ -6,7 +6,7 @@ if /usr/bin/gsutil ls gs://caps-signal-bucket/signal.csv; then
     lines=$(/usr/bin/gsutil cat gs://caps-signal-bucket/signal.csv | wc -l)
     if [ "$lines" -gt 1 ]; then
         # Print the last line
-        /usr/bin/gsutil cat gs://caps-signal-bucket/signal.csv | tail -n 1
+        /usr/bin/gsutil cat gs://caps-signal-bucket/signal.csv | head -n 2 | tail -n 1
     else
         echo "No signals found"
     fi
