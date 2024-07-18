@@ -11,9 +11,9 @@
 #include <cmath>
 
 #define EXEC_DELAY 5 // Entry Time offset
-#define CANCEL_DELAY 10 // Open Order Elimination
+#define CANCEL_DELAY 125 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (0.002) // Entry Gap
+#define CALC_PRICE_PERCENTAGE (0.01) // Entry Gap
 #define TP_PRICE_PERCENTAGE 0.01
 #define SL_PRICE_PERCENTAGE (-0.01)
 
