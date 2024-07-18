@@ -13,7 +13,7 @@
 #define EXEC_DELAY 5 // Entry Time offset
 #define CANCEL_DELAY 125 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (-0.01) // Entry Gap
+#define CALC_PRICE_PERCENTAGE (-0.002) // Entry Gap
 #define TP_PRICE_PERCENTAGE 0.01
 #define SL_PRICE_PERCENTAGE (-0.01)
 
@@ -201,7 +201,10 @@ void processSignal(int signal,
                 }
 
                 auto price = Margin::getPrice(apiParams, "BTCUSDT");
-                double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                double orig_price = price * (1 + (CALC_PRICE_PERCENTAGE * signal));
+                double calculated_price = roundToTickSize(orig_price, TICK_SIZE);
+                std::cout << "Orig:\t" << orig_price << std::endl;
+                std::cout << "Rounded:\t" << calculated_price << std::endl;
                 double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
                 double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
