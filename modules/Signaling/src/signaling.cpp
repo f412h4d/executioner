@@ -240,14 +240,26 @@ namespace Signaling {
     std::pair<std::string, int> readSignal() {
         std::string output = Utils::exec("../run_gsutil.sh");
         std::istringstream iss(output);
-        std::string datetime, signal_str;
+        std::string line, datetime, signal_str;
         int signal = 0;
 
-        if (std::getline(iss, datetime, ',') && std::getline(iss, signal_str)) {
-            try {
-                signal = std::stoi(signal_str);
-            } catch (const std::invalid_argument &e) {
-                std::cerr << "Invalid signal value: " << signal_str << std::endl;
+        if (std::getline(iss, line)) {
+            std::istringstream lineStream(line);
+            std::vector<std::string> columns;
+            std::string column;
+
+            while (std::getline(lineStream, column, ',')) {
+                columns.push_back(column);
+            }
+
+            if (!columns.empty()) {
+                datetime = columns.front();
+                signal_str = columns.back();
+                try {
+                    signal = std::stoi(signal_str);
+                } catch (const std::invalid_argument &e) {
+                    std::cerr << "Invalid signal value: " << signal_str << std::endl;
+                }
             }
         }
 
