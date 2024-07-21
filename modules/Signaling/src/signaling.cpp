@@ -251,38 +251,75 @@ void processSignal(int signal,
 }
 
 namespace Signaling {
-    std::pair<std::string, int> readSignal() {
+    std::tuple<std::string, int, double> readSignal() {
         std::string output = Utils::exec("../run_gsutil.sh");
         std::istringstream iss(output);
-        std::string line, datetime, signal_str;
+        std::string line;
+        std::unordered_map<std::string, size_t> headerIndex;
+        std::string datetime, signal_str, lag_str;
         int signal = 0;
+        double lag = 0.0;
 
+        // Read headers
+        if (std::getline(iss, line)) {
+            std::istringstream headerStream(line);
+
+            std::string header;
+            std::cout << "\nheader:\t" << header << std::endl;
+
+            size_t index = 0;
+            while (std::getline(headerStream, header, ',')) {
+                headerIndex[header] = index++;
+            }
+        }
+
+        // Read the last line
         std::string lastLine;
         while (std::getline(iss, line)) {
             lastLine = line;
+
+            std::cout << "\nLine:\t" << line << std::endl;
+
         }
 
+        // Process the last line
         std::istringstream lineStream(lastLine);
         std::vector<std::string> columns;
         std::string column;
 
         while (std::getline(lineStream, column, ',')) {
+            std::cout << "\ncolumn:\t" << column;
+
             columns.push_back(column);
         }
 
         if (!columns.empty()) {
-            datetime = columns.front();
-            signal_str = columns.back();
+            if (headerIndex.find("datetime") != headerIndex.end()) {
+                datetime = columns[headerIndex["datetime"]];
+            }
+            if (headerIndex.find("signal") != headerIndex.end()) {
+                signal_str = columns[headerIndex["signal"]];
+            }
+            if (headerIndex.find("lag") != headerIndex.end()) {
+                lag_str = columns[headerIndex["lag"]];
+            }
 
             try {
                 signal = std::stoi(signal_str);
             } catch (const std::invalid_argument &e) {
                 std::cerr << "Invalid signal value: " << signal_str << std::endl;
             }
+
+            try {
+                lag = std::stod(lag_str);
+            } catch (const std::invalid_argument &e) {
+                std::cerr << "Invalid lag value: " << lag_str << std::endl;
+            }
         }
 
-        return {datetime, signal};
+        return {datetime, signal, lag};
     }
+
     [[noreturn]] void init(const APIParams &apiParams) {
         SignalQueue signalQueue;
         SignalQueue tpSlQueue;
@@ -294,10 +331,11 @@ namespace Signaling {
         bool monitor_lock = true;
 
         while (true) {
-            auto [datetime, signal] = readSignal();
+            auto [datetime, signal, lag] = readSignal();
 
-            std::cout << "Signal -> " << signal << std::endl;
+            std::cout << "\n\nSignal -> " << signal << std::endl;
             std::cout << "Datetime -> " << datetime << std::endl;
+            std::cout << "Lag -> " << lag << std::endl;
 
             if (!monitor_lock) {
                 std::cout << "-> Adding new monitor event. \n";
