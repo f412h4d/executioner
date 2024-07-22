@@ -68,7 +68,7 @@ double roundToTickSize(double price, double tick_size) {
 
 void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, const std::string &side, double orig_qty, double tpPrice,
                         double slPrice) {
-    int signal = side == "BUY" ? 1:-1;
+    int signal = side == "SELL" ? 1:-1;
     auto price = Margin::getPrice(apiParams, "BTCUSDT");
     double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
     double newTpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
