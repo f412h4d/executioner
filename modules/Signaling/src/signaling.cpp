@@ -74,6 +74,9 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
     double newTpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
     double newSlPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
+    std::cout << "-------------------\nTP:\t" << newTpPrice << std::endl;
+    std::cout << "-------------------\nSL:\t" << newSlPrice << std::endl;
+
 
     TriggerOrderInput tpOrder(
             symbol,
