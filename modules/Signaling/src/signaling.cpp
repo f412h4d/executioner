@@ -74,6 +74,10 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
     double newTpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
     double newSlPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
+    std::cout << "-------------------\nSignal:\t" << signal << std::endl;
+    std::cout << "-------------------\nPRICE:\t" << price << std::endl;
+    std::cout << "-------------------\nTP Percent:\t" << TP_PRICE_PERCENTAGE << std::endl;
+    std::cout << "-------------------\nSL Percent:\t" << SL_PRICE_PERCENTAGE << std::endl;
     std::cout << "-------------------\nTP:\t" << newTpPrice << std::endl;
     std::cout << "-------------------\nSL:\t" << newSlPrice << std::endl;
 
