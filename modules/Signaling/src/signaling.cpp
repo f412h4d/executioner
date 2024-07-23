@@ -5,6 +5,7 @@
 #include "../../TimedEventQueue/headers/SignalQueue.h"
 
 #include <iostream>
+#include <ostream>
 #include <vector>
 #include <string>
 #include <cstdio>
@@ -13,7 +14,7 @@
 #define EXEC_DELAY 1 // Entry Time offset
 #define CANCEL_DELAY 3001 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (-0.0005) // Entry Gap needs to be minus
+#define CALC_PRICE_PERCENTAGE (-0.0015) // Entry Gap needs to be minus
 #define TP_PRICE_PERCENTAGE 0.01
 #define SL_PRICE_PERCENTAGE (-0.01)
 
@@ -81,7 +82,6 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
     std::cout << "-------------------\nTP:\t" << newTpPrice << std::endl;
     std::cout << "-------------------\nSL:\t" << newSlPrice << std::endl;
 
-
     TriggerOrderInput tpOrder(
             symbol,
             side,
@@ -127,6 +127,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                               const APIParams &apiParams,
                               const std::string &symbol,
                               const std::string &side,
+                              std::string &order_id,
                               double &orig_qty,
                               double &tpPrice,
                               double &slPrice,
@@ -135,7 +136,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
     signalQueue.addEvent(
             TIME::now() + std::chrono::seconds(MONITOR_DELAY),
             "Monitor Order Status",
-            [&apiParams, &symbol, &side, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
+            [&apiParams, &symbol, &side, &order_id, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
                 std::cout << "\n\n\nTP SL MONITOR Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n\n\n";
 
                 if (monitor_lock) {
@@ -144,6 +145,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                     return;
                 }
 
+                std::cout << "Order Id:\t" << order_id << std::endl;
                 if (isOrderFilled(apiParams)) {
                     std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n" << "Order Is FILLED Adding TP & SL\n";
                     monitor_lock = true;
@@ -187,7 +189,6 @@ void cancelWithDelay(int signal,
                     auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
                     std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
 
-//                    tpSlQueue.stop();
                     lock = true;
                 } else {
                     std::cerr << "Unexpected response format: " << open_orders_response.dump(4) << std::endl;
@@ -200,6 +201,7 @@ void processSignal(int signal,
                    const APIParams &apiParams,
                    SignalQueue &signalQueue,
                    const std::string &side,
+                   std::string &last_order_id,
                    double &last_orig_qty,
                    double &last_tp_price,
                    double &last_sl_price,
@@ -212,7 +214,7 @@ void processSignal(int signal,
     signalQueue.addEvent(
             TIME::now() + std::chrono::seconds(EXEC_DELAY),
             "Signal is executed.",
-            [&apiParams, signal, side, &last_orig_qty, &last_tp_price, &last_sl_price, &monitor_lock]() {
+            [&apiParams, signal, side, &last_order_id, &last_orig_qty, &last_tp_price, &last_sl_price, &monitor_lock]() {
                 bool validConditions = prepareForOrder(apiParams);
                 if (!validConditions) {
                     return;
@@ -248,6 +250,14 @@ void processSignal(int signal,
                         orig_qty = order_response["origQty"].get<double>();
                     }
 
+                    if (order_response["orderId"].is_string()) {
+                        orderId = order_response["orderId"].get<std::string>();
+                    } else if (order_response["orderId"].is_number()) {
+                        orderId = std::to_string(order_response["orderId"].get<long>());
+                    }
+
+                    std::cout << "Order after creation: " << orderId << std::endl;
+                    last_order_id = orderId;
                     last_orig_qty = orig_qty;
                     last_tp_price = tpPrice;
                     last_sl_price = slPrice;
@@ -332,6 +342,7 @@ namespace Signaling {
         SignalQueue tpSlQueue;
         std::string prev_datetime;
 
+        std::string last_order_id = "none";
         double last_orig_qty = 0;
         double last_tp_price = 0;
         double last_sl_price = 0;
@@ -346,7 +357,7 @@ namespace Signaling {
 
             if (!monitor_lock) {
                 std::cout << "-> Adding new monitor event. \n";
-                monitorOrderAndPlaceTpSl(tpSlQueue, apiParams, "BTCUSDT", signal == 1 ? "SELL":"BUY", last_orig_qty, last_tp_price,
+                monitorOrderAndPlaceTpSl(tpSlQueue, apiParams, "BTCUSDT", signal == 1 ? "SELL":"BUY", last_order_id, last_orig_qty, last_tp_price,
                                          last_sl_price, monitor_lock);
             }
 
@@ -368,11 +379,11 @@ namespace Signaling {
             prev_datetime = datetime;
 
             if (signal == 1) {
-                processSignal(signal, apiParams, signalQueue, "BUY", last_orig_qty, last_tp_price,
+                processSignal(signal, apiParams, signalQueue, "BUY", last_order_id, last_orig_qty, last_tp_price,
                               last_sl_price, monitor_lock);
                 cancelWithDelay(signal, apiParams, signalQueue, tpSlQueue, monitor_lock);
             } else if (signal == -1) {
-                processSignal(signal, apiParams, signalQueue, "SELL", last_orig_qty, last_tp_price,
+                processSignal(signal, apiParams, signalQueue, "SELL", last_order_id, last_orig_qty, last_tp_price,
                               last_sl_price, monitor_lock);
                 cancelWithDelay(signal, apiParams, signalQueue, tpSlQueue, monitor_lock);
             }
