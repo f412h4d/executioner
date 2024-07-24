@@ -81,3 +81,29 @@ nlohmann::json OrderService::cancelAllOpenOrders(const APIParams &apiParams, con
 
     return nlohmann::json::parse(r.text);
 }
+
+nlohmann::json OrderService::getOrderDetails(const APIParams &apiParams, const std::string &symbol, const std::string &orderId, const std::string &origClientOrderId) {
+    std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+    std::string apiCall = "fapi/v1/order";
+
+    long timestamp = static_cast<long>(std::time(nullptr) * 1000);
+
+    std::string params = "symbol=" + symbol + "&recvWindow=" + std::to_string(apiParams.recvWindow) + "&timestamp=" + std::to_string(timestamp);
+
+    if (!orderId.empty()) {
+        params += "&orderId=" + orderId;
+    } else if (!origClientOrderId.empty()) {
+        params += "&origClientOrderId=" + origClientOrderId;
+    } else {
+        throw std::invalid_argument("Either orderId or origClientOrderId must be provided.");
+    }
+
+    std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
+    std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
+
+    cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
+    std::cout << "Response Code: " << r.status_code << std::endl;
+    std::cout << "Response Text: " << r.text << std::endl;
+
+    return nlohmann::json::parse(r.text);
+}

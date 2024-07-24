@@ -145,7 +145,17 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                     return;
                 }
 
-                std::cout << "Order Id:\t" << order_id << std::endl;
+                std::string order_status = "none";
+                auto response = OrderService::getOrderDetails(apiParams, "BTCUSDT", order_id);
+                if (response["status"].is_string()) {
+                    order_status = response["status"].get<std::string>();
+                }
+                if (order_status == "CANCELED" || order_status == "none") {
+                    std::cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n" << "Order Is CANCELED Aborting TP & SL\n";
+                    monitor_lock = true;
+                    return;
+                }
+
                 if (isOrderFilled(apiParams)) {
                     std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n" << "Order Is FILLED Adding TP & SL\n";
                     monitor_lock = true;
@@ -262,6 +272,10 @@ void processSignal(int signal,
                     last_tp_price = tpPrice;
                     last_sl_price = slPrice;
                     monitor_lock = false;
+
+
+                    auto response = OrderService::getOrderDetails(apiParams, "BTCUSDT", orderId);
+                    std::cout << "------------------\nOrders Details Response:\n" << response.dump(4) << std::endl << std::endl;
                 }
             }
     );
