@@ -29,4 +29,7 @@ bool isCurrentTimeInRange(const std::pair<std::chrono::system_clock::time_point,
 // Get the current date and time in YYYY-MM-DD HH:MM:SS format
 std::string getCurrentDateTime();
 
+// Fetch news dates from the file and return the range
+std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point> fetchNewsDateRange();
+
 #endif // NEWS_H

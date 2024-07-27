@@ -1,4 +1,5 @@
 #include "../headers/news.h"
+#include "../../Utils/headers/utils.h"
 
 std::string getCurrentDate() {
     auto now = std::chrono::system_clock::now();
@@ -42,4 +43,25 @@ std::string getCurrentDateTime() {
     std::ostringstream oss;
     oss << std::put_time(&local_tm, "%Y-%m-%d %H:%M:%S");
     return oss.str();
+}
+
+std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point> fetchNewsDateRange() {
+    std::string output = Utils::exec("../run_gsutil_news.sh");
+    std::istringstream iss(output);
+    std::string line;
+    std::vector<std::string> dateTimes;
+
+    // Skip the first line (header)
+    std::getline(iss, line);
+
+    // Read the rest of the lines
+    while (std::getline(iss, line)) {
+        dateTimes.push_back(line);
+    }
+
+    std::vector<std::chrono::system_clock::time_point> sortedDates;
+    std::transform(dateTimes.begin(), dateTimes.end(), std::back_inserter(sortedDates), parseDateTime);
+    std::sort(sortedDates.begin(), sortedDates.end());
+
+    return createRange(sortedDates);
 }

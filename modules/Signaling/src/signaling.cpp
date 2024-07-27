@@ -2,14 +2,15 @@
 #include "order.h"
 #include "margin.h"
 #include "utils.h"
+#include "news.h"
 #include "../../TimedEventQueue/headers/SignalQueue.h"
 
 #include <iostream>
 #include <ostream>
 #include <vector>
 #include <string>
-#include <cstdio>
-#include <cmath>
+#include <unordered_map>
+#include <sstream>
 
 #define EXEC_DELAY 1 // Entry Time offset
 #define CANCEL_DELAY 3001 // Open Order Elimination
@@ -294,10 +295,7 @@ namespace Signaling {
         // Read headers
         if (std::getline(iss, line)) {
             std::istringstream headerStream(line);
-
             std::string header;
-            std::cout << "\nheader:\t" << header << std::endl;
-
             size_t index = 0;
             while (std::getline(headerStream, header, ',')) {
                 headerIndex[header] = index++;
@@ -308,19 +306,13 @@ namespace Signaling {
         std::string lastLine;
         while (std::getline(iss, line)) {
             lastLine = line;
-
-            std::cout << "\nLine:\t" << line << std::endl;
-
         }
 
         // Process the last line
         std::istringstream lineStream(lastLine);
         std::vector<std::string> columns;
         std::string column;
-
         while (std::getline(lineStream, column, ',')) {
-            std::cout << "\ncolumn:\t" << column;
-
             columns.push_back(column);
         }
 
@@ -362,7 +354,15 @@ namespace Signaling {
         double last_sl_price = 0;
         bool monitor_lock = true;
 
+        auto newsDateRange = fetchNewsDateRange();
+
         while (true) {
+            if (!isCurrentTimeInRange(newsDateRange)) {
+                std::cout << "Current datetime is not within the news date range. Skipping signal processing."
+                          << std::endl;
+                continue;
+            }
+
             auto [datetime, signal, lag] = readSignal();
 
             std::cout << "\n\nSignal -> " << signal << std::endl;

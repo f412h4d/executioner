@@ -5,9 +5,9 @@ set(CMAKE_CXX_STANDARD 23)
 
 
 # Include directories
+include_directories(modules/News/headers)
 include_directories(modules/Utils/headers)
 include_directories(modules/Margin/headers)
-include_directories(modules/Account/headers)
 include_directories(modules/Signaling/headers)
 
 include_directories(modules/Order/headers)
@@ -18,6 +18,7 @@ include_directories(modules/Order/models/TriggerOrderInput)
 # Source files
 set(SOURCES
         main.cpp
+        modules/News/src/news.cpp
         modules/Utils/src/utils.cpp
         modules/Margin/src/margin.cpp
         modules/Signaling/src/signaling.cpp
