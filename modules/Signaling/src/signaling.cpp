@@ -362,11 +362,12 @@ namespace Signaling {
             std::cout << "::::::::::::::::::::::::::::\nNews Date Range: " << std::put_time(std::localtime(&minTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&maxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
             std::string currentDateTime = getCurrentDateTime();
             std::cout << "::::::::::::::::::::::::::::\nCurrent datetime: " << currentDateTime << std::endl;
+            std::cout << "::::::::::::::::::::::::::::\nIs In Range? : " << isCurrentTimeInRange(newsDateRange) << std::endl;
             std::cout << "::::::::::::::::::::::::::::\n" << std::endl;
 
 
-            if (!isCurrentTimeInRange(newsDateRange)) {
-                std::cout << "Current datetime is not within the news date range. Skipping signal processing."
+            if (isCurrentTimeInRange(newsDateRange)) {
+                std::cout << "Current datetime is within the news date range. Skipping signal processing."
                           << std::endl;
                 continue;
             }
