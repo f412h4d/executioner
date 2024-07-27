@@ -359,7 +359,11 @@ namespace Signaling {
         while (true) {
             std::time_t minTime = std::chrono::system_clock::to_time_t(newsDateRange.first);
             std::time_t maxTime = std::chrono::system_clock::to_time_t(newsDateRange.second);
-            std::cout << "News Date Range: " << std::put_time(std::localtime(&minTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&maxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            std::cout << "::::::::::::::::::::::::::::\nNews Date Range: " << std::put_time(std::localtime(&minTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&maxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            std::string currentDateTime = getCurrentDateTime();
+            std::cout << "::::::::::::::::::::::::::::\nCurrent datetime: " << currentDateTime << std::endl;
+            std::cout << "::::::::::::::::::::::::::::\n" << std::endl;
+
 
             if (!isCurrentTimeInRange(newsDateRange)) {
                 std::cout << "Current datetime is not within the news date range. Skipping signal processing."
