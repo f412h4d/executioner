@@ -357,15 +357,6 @@ namespace Signaling {
         auto newsDateRange = fetchNewsDateRange();
 
         while (true) {
-            std::time_t minTime = std::chrono::system_clock::to_time_t(newsDateRange.first);
-            std::time_t maxTime = std::chrono::system_clock::to_time_t(newsDateRange.second);
-            std::cout << "::::::::::::::::::::::::::::\nNews Date Range: " << std::put_time(std::localtime(&minTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&maxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
-            std::string currentDateTime = getCurrentDateTime();
-            std::cout << "::::::::::::::::::::::::::::\nCurrent datetime: " << currentDateTime << std::endl;
-            std::cout << "::::::::::::::::::::::::::::\nIs In Range? : " << isCurrentTimeInRange(newsDateRange) << std::endl;
-            std::cout << "::::::::::::::::::::::::::::\n" << std::endl;
-
-
             if (isCurrentTimeInRange(newsDateRange)) {
                 std::cout << "Current datetime is within the news date range. Skipping signal processing."
                           << std::endl;
@@ -373,10 +364,6 @@ namespace Signaling {
             }
 
             auto [datetime, signal, lag] = readSignal();
-
-            std::cout << "\n\nSignal -> " << signal << std::endl;
-            std::cout << "Datetime -> " << datetime << std::endl;
-            std::cout << "Lag -> " << lag << std::endl;
 
             if (!monitor_lock) {
                 std::cout << "-> Adding new monitor event. \n";
