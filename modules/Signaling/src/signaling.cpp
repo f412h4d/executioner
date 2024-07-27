@@ -358,10 +358,9 @@ namespace Signaling {
 
         while (true) {
             if (isCurrentTimeInRange(newsDateRange)) {
-                std::cout << "Current datetime is within the news date range. Skipping signal processing."
-                          << std::endl;
                 continue;
             }
+            std::cout << "Current datetime is not within the news date range." << std::endl;
 
             auto [datetime, signal, lag] = readSignal();
 
