@@ -282,6 +282,47 @@ void processSignal(int signal,
     );
 }
 
+std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point> fetchDeactivateDateRange() {
+    std::string output = Utils::exec("../run_gsutil_deactivate.sh");
+    std::istringstream iss(output);
+    std::string line;
+    std::unordered_map<std::string, size_t> headerIndex;
+    std::string start_str, end_str;
+
+    // Read headers
+    if (std::getline(iss, line)) {
+        std::istringstream headerStream(line);
+        std::string header;
+        size_t index = 0;
+        while (std::getline(headerStream, header, ',')) {
+            headerIndex[header] = index++;
+        }
+    }
+
+    // Read the data line
+    if (std::getline(iss, line)) {
+        std::istringstream lineStream(line);
+        std::vector<std::string> columns;
+        std::string column;
+        while (std::getline(lineStream, column, ',')) {
+            columns.push_back(column);
+        }
+
+        if (!columns.empty()) {
+            if (headerIndex.find("start") != headerIndex.end()) {
+                start_str = columns[headerIndex["start"]];
+            }
+            if (headerIndex.find("end") != headerIndex.end()) {
+                end_str = columns[headerIndex["end"]];
+            }
+        }
+    }
+
+    auto start_time = parseDateTime(start_str);
+    auto end_time = parseDateTime(end_str);
+    return {start_time, end_time};
+}
+
 namespace Signaling {
     std::tuple<std::string, int, double> readSignal() {
         std::string output = Utils::exec("../run_gsutil.sh");
@@ -361,6 +402,17 @@ namespace Signaling {
                 continue;
             }
             std::cout << "Current datetime is not within the news date range." << std::endl;
+
+            auto deactivateDateRange = fetchDeactivateDateRange();
+            std::time_t deactivateMinTime = std::chrono::system_clock::to_time_t(deactivateDateRange.first);
+            std::time_t deactivateMaxTime = std::chrono::system_clock::to_time_t(deactivateDateRange.second);
+            std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+
+            if (isCurrentTimeInRange(deactivateDateRange)) {
+                continue;
+            }
+            std::cout << "Current datetime is NOT within the deactivate date range." << std::endl;
+             
 
             auto [datetime, signal, lag] = readSignal();
 
