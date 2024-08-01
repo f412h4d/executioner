@@ -5,14 +5,13 @@ Capsmark Trade Executor(or maybe Executioner 😉) Written In C++
 
 1. CMAKE_CXX_STANDARD 23
 2. CMAKE VERSION 3.28 at minimum
-3. Curl -> `sudo apt-get install libcurl4-openssl-dev` (the GitHub actions are using ubuntu)
-4. OpenSSL -> `sudo apt install libssl-dev`
-5. Using this commit of `vspkg`: "afa12e7292fb47771e619675d7915645fe0adb1b"
-6. Install vcpkg packages `./vcpkg/vcpkg install nlohmann-json`
 
-Several secrets are managed in the repository secrets to grant access to GCP & SA of the instance.
 
-The GCP instance is name `Alastor`.
+## 1. Set Up Your Development Environment:
+Ensure you have the necessary tools and libraries installed:
 
-Alastor is likened to Nemesis and the destroying angel and is known as The `Executioner`
-Alastor, an epithet of the Greek God Zeus, according to Hesychius of Alexandria and the Etymologicum Magnum, which described him as the avenger of evil deeds, specifically familial bloodshed. As the personification of a curse, it was also a sidekick of the Erinyes.
+```
+sudo apt-get update
+sudo apt-get install build-essential cmake libssl-dev
+sudo apt-get install libboost-all-dev
+```

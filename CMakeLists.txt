@@ -3,12 +3,16 @@ project(executioner)
 
 set(CMAKE_CXX_STANDARD 23)
 
+# Installation steps provided in readme
+find_package(Boost REQUIRED COMPONENTS system thread)
+include_directories(${Boost_INCLUDE_DIRS})
 
 # Include directories
 include_directories(modules/News/headers)
 include_directories(modules/Utils/headers)
 include_directories(modules/Margin/headers)
 include_directories(modules/Signaling/headers)
+include_directories(modules/Websocket/headers)
 
 include_directories(modules/Order/headers)
 include_directories(modules/Order/models/APIParams)
@@ -61,5 +65,7 @@ FetchContent_MakeAvailable(openssl)
 # Find the OpenSSL package
 find_package(OpenSSL REQUIRED)
 
+find_package(spdlog REQUIRED)
+
 # Link the libraries
-target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto ${Boost_LIBRARIES} spdlog::spdlog)
