@@ -35,11 +35,7 @@ public:
 
         ws_.async_write(
                 boost::asio::buffer(j.dump()),
-                std::bind(
-                        &session::on_write,
-                        shared_from_this(),
-                        std::placeholders::_1,
-                        std::placeholders::_2));
+                [capture0 = shared_from_this()](auto && PH1, auto && PH2) { capture0->on_write(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
     }
 
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred) override {
@@ -55,20 +51,27 @@ public:
 
         ws_.async_read(
                 buffer_,
-                std::bind(
-                        &session::on_read,
-                        shared_from_this(),
-                        std::placeholders::_1,
-                        std::placeholders::_2));
+                [capture0 = shared_from_this()](auto && PH1, auto && PH2) { capture0->on_read(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
     }
 
-    void refresh_listen_key() {
-        cpr::Response r = cpr::Put(cpr::Url{"https://fapi.binance.com/fapi/v1/listenKey"},
-                                   cpr::Header{{"X-MBX-APIKEY", api_params_.apiKey}},
-                                   cpr::Body{std::string{"listenKey="} + listen_key_});
-        if (r.status_code != 200) {
-            std::cerr << "Failed to refresh listenKey: " << r.status_code << " " << r.text << std::endl;
+    void start_keep_alive() {
+        keep_alive_thread_ = std::thread([this]() {
+            while (keep_alive_running_) {
+                std::this_thread::sleep_for(std::chrono::minutes(30));
+                refresh_listen_key();
+            }
+        });
+    }
+
+    void stop_keep_alive() {
+        keep_alive_running_ = false;
+        if (keep_alive_thread_.joinable()) {
+            keep_alive_thread_.join();
         }
+    }
+
+    ~event_order_update_session() override {
+        stop_keep_alive();
     }
 
 private:
@@ -84,6 +87,17 @@ private:
         }
     }
 
+    void refresh_listen_key() {
+        cpr::Response r = cpr::Put(cpr::Url{"https://fapi.binance.com/fapi/v1/listenKey"},
+                                   cpr::Header{{"X-MBX-APIKEY", api_params_.apiKey}},
+                                   cpr::Body{std::string{"listenKey="} + listen_key_});
+        if (r.status_code != 200) {
+            std::cerr << "Failed to refresh listenKey: " << r.status_code << " " << r.text << std::endl;
+        }
+    }
+
+    std::thread keep_alive_thread_;
+    std::atomic<bool> keep_alive_running_{true};
 };
 
 #endif // EVENT_ORDER_UPDATE_SESSION_HPP

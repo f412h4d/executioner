@@ -1,9 +1,6 @@
-#include <iostream>
 #include <thread>
 #include <vector>
 #include <memory>
-#include <chrono>
-#include <cpr/cpr.h>
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
@@ -16,20 +13,11 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl/context.hpp>
 
-// Template function to run a WebSocket session
 template<typename SessionType>
 void run_websocket_session(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<ssl::context> ctx, const std::string& host, const std::string& port, const APIParams& api_params) {
     auto session_instance = std::make_shared<SessionType>(*ioc, *ctx, api_params);
     session_instance->run(host, port);
     ioc->run();
-}
-
-void keep_alive_listen_key(std::shared_ptr<event_order_update_session> session_instance) {
-    // TODO: fix this
-//    while (true) {
-//        std::this_thread::sleep_for(std::chrono::minutes(30));
-//        session_instance->refresh_listen_key();
-//    }
 }
 
 int main() {
@@ -63,13 +51,13 @@ int main() {
     load_root_certificates(*ctx);
 
     // Run the WebSocket sessions in new threads
-//    threads.emplace_back(run_websocket_session<session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
-//    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
+    threads.emplace_back(run_websocket_session<session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
+    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
     auto event_order_session = std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams);
     threads.emplace_back([&]() { event_order_session->run("fstream.binance.com", "443"); ioc->run(); });
 
     // Start the keep-alive thread for event_order_update_session
-    threads.emplace_back(keep_alive_listen_key, event_order_session);
+    event_order_session->start_keep_alive();
 
     // Wait for all threads to finish
     for (auto& thread : threads) {

@@ -14,4 +14,5 @@ Ensure you have the necessary tools and libraries installed:
 sudo apt-get update
 sudo apt-get install build-essential cmake libssl-dev
 sudo apt-get install libboost-all-dev
+sudo apt-get install libspdlog-dev
 ```
