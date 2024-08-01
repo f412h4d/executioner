@@ -51,8 +51,8 @@ int main() {
     load_root_certificates(*ctx);
 
     // Run the WebSocket sessions in new threads
-    threads.emplace_back(run_websocket_session<session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
-    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
+//    threads.emplace_back(run_websocket_session<session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
+//    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
     auto event_order_session = std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams);
     threads.emplace_back([&]() { event_order_session->run("fstream.binance.com", "443"); ioc->run(); });
 
