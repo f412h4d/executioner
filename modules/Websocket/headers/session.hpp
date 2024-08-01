@@ -11,25 +11,28 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include "APIParams.h"
 
 using tcp = boost::asio::ip::tcp;
 namespace ssl = boost::asio::ssl;
 namespace websocket = boost::beast::websocket;
 
 class session : public std::enable_shared_from_this<session> {
-    tcp::resolver resolver_;
-    std::string host_;
-
 protected:
+    tcp::resolver resolver_;
     websocket::stream<ssl::stream<tcp::socket>> ws_;
     boost::beast::multi_buffer buffer_;
+    std::string host_;
+    APIParams api_params_;
+    std::string listen_key_;
+
 public:
-    explicit session(boost::asio::io_context &ioc, ssl::context &ctx)
-            : resolver_(ioc), ws_(ioc, ctx) {}
+    explicit session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams& api_params)
+            : resolver_(ioc), ws_(ioc, ctx), api_params_(api_params) {}
 
     virtual ~session() = default;
 
-    void run(const std::string &host, const std::string &port) {
+    virtual void run(const std::string &host, const std::string &port) {
         host_ = host;
         resolver_.async_resolve(
                 host,
@@ -71,7 +74,7 @@ public:
         if (ec)
             return fail(ec, "ssl_handshake");
 
-        ws_.async_handshake(host_, "/ws",
+        ws_.async_handshake(host_, "/ws/" + listen_key_,
                             std::bind(
                                     &session::on_handshake,
                                     shared_from_this(),
