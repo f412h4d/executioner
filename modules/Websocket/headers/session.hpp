@@ -74,7 +74,8 @@ public:
         if (ec)
             return fail(ec, "ssl_handshake");
 
-        ws_.async_handshake(host_, "/ws/" + listen_key_,
+        std::string websocket_url = "/ws/" + listen_key_;
+        ws_.async_handshake(host_, websocket_url,
                             std::bind(
                                     &session::on_handshake,
                                     shared_from_this(),
