@@ -15,7 +15,7 @@
 #define EXEC_DELAY 1 // Entry Time offset
 #define CANCEL_DELAY 3001 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (-0.0015) // Entry Gap needs to be minus
+#define CALC_PRICE_PERCENTAGE (0.0015) // Entry Gap needs to be minus
 #define TP_PRICE_PERCENTAGE 0.01
 #define SL_PRICE_PERCENTAGE (-0.01)
 
@@ -138,11 +138,8 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
             TIME::now() + std::chrono::seconds(MONITOR_DELAY),
             "Monitor Order Status",
             [&apiParams, &symbol, &side, &order_id, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
-                std::cout << "\n\n\nTP SL MONITOR Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n\n\n";
-
                 if (monitor_lock) {
                     std::cout << "Monitoring is locked, waiting for the order to be executed.\n";
-                    std::cout << "LOCKED Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n";
                     return;
                 }
 
@@ -162,7 +159,6 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                     monitor_lock = true;
                     placeTpAndSlOrders(apiParams, symbol, side, orig_qty, tpPrice, slPrice);
                 } else {
-                    std::cout << "NOT FILLED Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n";
                     std::cout << "Not filled yet, will check again later.\n";
                 }
             }
