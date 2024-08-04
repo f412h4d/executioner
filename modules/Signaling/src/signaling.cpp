@@ -146,7 +146,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                 if (response["status"].is_string()) {
                     order_status = response["status"].get<std::string>();
                 }
-                if (order_status == "CANCELED" || order_status == "none") {
+                if (order_status == "CANCELED") {
                     std::cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n" << "Order Is CANCELED Aborting TP & SL\n";
                     monitor_lock = true;
                     return;
