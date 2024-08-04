@@ -401,17 +401,17 @@ namespace Signaling {
             if (isCurrentTimeInRange(newsDateRange)) {
                 continue;
             }
-            std::cout << "Current datetime is not within the news date range." << std::endl;
+            // std::cout << "Current datetime is not within the news date range." << std::endl;
 
             auto deactivateDateRange = fetchDeactivateDateRange();
             std::time_t deactivateMinTime = std::chrono::system_clock::to_time_t(deactivateDateRange.first);
             std::time_t deactivateMaxTime = std::chrono::system_clock::to_time_t(deactivateDateRange.second);
-            std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            // std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
 
             if (isCurrentTimeInRange(deactivateDateRange)) {
                 continue;
             }
-            std::cout << "Current datetime is NOT within the deactivate date range." << std::endl;
+            // std::cout << "Current datetime is NOT within the deactivate date range." << std::endl;
              
 
             auto [datetime, signal, lag] = readSignal();
@@ -423,17 +423,17 @@ namespace Signaling {
             }
 
             if (signal == 0) {
-                std::cout << "Signaling received: DO NOTHING" << std::endl;
+                // std::cout << "Signaling received: DO NOTHING" << std::endl;
                 continue;
             }
 
             if (datetime.empty()) {
-                std::cout << "No valid signal received." << std::endl;
+                // std::cout << "No valid signal received." << std::endl;
                 continue;
             }
 
             if (datetime == prev_datetime) {
-                std::cout << "Signal datetime has not changed. Skipping execution." << std::endl;
+                // std::cout << "Signal datetime has not changed. Skipping execution." << std::endl;
                 continue;
             }
 
