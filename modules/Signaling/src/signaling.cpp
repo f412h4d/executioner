@@ -318,7 +318,7 @@ std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time
 }
 
 namespace Signaling {
-    std::tuple<std::string, int, double> readSignal() {
+    std::tuple<std::string, int, double, std::chrono::system_clock::time_point> readSignal() {
         std::string output = Utils::exec("../run_gsutil.sh");
         std::istringstream iss(output);
         std::string line;
@@ -351,9 +351,13 @@ namespace Signaling {
             columns.push_back(column);
         }
 
+        // this is used to be check in news range
+        std::chrono::system_clock::time_point signal_time;
+
         if (!columns.empty()) {
             if (headerIndex.find("datetime") != headerIndex.end()) {
                 datetime = columns[headerIndex["datetime"]];
+                signal_time = parseDateTime(datetime);
             }
             if (headerIndex.find("signal") != headerIndex.end()) {
                 signal_str = columns[headerIndex["signal"]];
@@ -375,7 +379,7 @@ namespace Signaling {
             }
         }
 
-        return {datetime, signal, lag};
+        return {datetime, signal, lag, signal_time};
     }
 
     [[noreturn]] void init(const APIParams &apiParams) {
@@ -413,7 +417,11 @@ namespace Signaling {
             // std::cout << "Current datetime is NOT within the deactivate date range." << std::endl;
              
 
-            auto [datetime, signal, lag] = readSignal();
+            auto [datetime, signal, lag, signal_time] = readSignal();
+
+            if (isTimeInRange(newsDateRange, signal_time)) {
+                continue;
+            }
 
             if (!monitor_lock) {
                 std::cout << "-> Adding new monitor event. \n";

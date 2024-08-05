@@ -36,6 +36,10 @@ bool isCurrentTimeInRange(const std::pair<std::chrono::system_clock::time_point,
     return now >= range.first && now <= range.second;
 }
 
+bool isTimeInRange(const std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point>& range, const std::chrono::system_clock::time_point& time) {
+    return time >= range.first && time <= range.second;
+}
+
 std::string getCurrentDateTime() {
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);

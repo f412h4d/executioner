@@ -26,6 +26,8 @@ std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time
 // Check if the current time is within a given range
 bool isCurrentTimeInRange(const std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point>& range);
 
+bool isTimeInRange(const std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point>& range, const std::chrono::system_clock::time_point& time);
+
 // Get the current date and time in YYYY-MM-DD HH:MM:SS format
 std::string getCurrentDateTime();
 
