@@ -26,8 +26,8 @@ std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time
     if (sortedDates.empty()) {
         throw std::runtime_error("No dates provided");
     }
-    auto minDate = sortedDates.front() - std::chrono::hours(12);
-    auto maxDate = sortedDates.back() + std::chrono::seconds(1);
+    auto minDate = sortedDates.front() - std::chrono::hours(13);
+    auto maxDate = sortedDates.back() + std::chrono::hours(1);
     return {minDate, maxDate};
 }
 
