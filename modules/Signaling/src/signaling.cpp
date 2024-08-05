@@ -419,6 +419,9 @@ namespace Signaling {
 
             auto [datetime, signal, lag, signal_time] = readSignal();
 
+            std::time_t signalTimeT = std::chrono::system_clock::to_time_t(signal_time);
+            std::cout << "Signal Time: " << std::put_time(std::localtime(&signalTimeT), "%Y-%m-%d %H:%M:%S") << std::endl;
+
             if (isTimeInRange(newsDateRange, signal_time)) {
                 continue;
             }
