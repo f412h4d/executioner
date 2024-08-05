@@ -38,17 +38,7 @@ namespace Margin {
         std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, params);
         std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
 
-        // Log details
-        std::cout << "Base URL: " << baseUrl << std::endl;
-        std::cout << "API Key Length: " << apiParams.apiKey.length() << std::endl;
-        std::cout << "API Secret Length: " << apiParams.apiSecret.length() << std::endl;
-        std::cout << "URL: " << url << std::endl;
-        std::cout << "Params: " << params << std::endl;
-        std::cout << "Signature: " << signature << std::endl;
-
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
-        std::cout << "Response Code: " << r.status_code << std::endl;
-        std::cout << "Response Text: " << r.text << std::endl;
 
         return nlohmann::json::parse(r.text);
     }

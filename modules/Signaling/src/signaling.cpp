@@ -7,16 +7,14 @@
 
 #include <iostream>
 #include <ostream>
-#include <vector>
 #include <string>
-#include <unordered_map>
 #include <sstream>
 
 #define EXEC_DELAY 1 // Entry Time offset
 #define CANCEL_DELAY 3001 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (-0.0015) // Entry Gap needs to be minus
-#define TP_PRICE_PERCENTAGE 0.01
+#define CALC_PRICE_PERCENTAGE (-0.0008) // Entry Gap needs to be minus
+#define TP_PRICE_PERCENTAGE 0.014
 #define SL_PRICE_PERCENTAGE (-0.01)
 
 #define TICK_SIZE 0.1
@@ -138,11 +136,8 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
             TIME::now() + std::chrono::seconds(MONITOR_DELAY),
             "Monitor Order Status",
             [&apiParams, &symbol, &side, &order_id, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
-                std::cout << "\n\n\nTP SL MONITOR Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n\n\n";
-
                 if (monitor_lock) {
                     std::cout << "Monitoring is locked, waiting for the order to be executed.\n";
-                    std::cout << "LOCKED Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n";
                     return;
                 }
 
@@ -151,7 +146,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                 if (response["status"].is_string()) {
                     order_status = response["status"].get<std::string>();
                 }
-                if (order_status == "CANCELED" || order_status == "none") {
+                if (order_status == "CANCELED") {
                     std::cout << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n" << "Order Is CANCELED Aborting TP & SL\n";
                     monitor_lock = true;
                     return;
@@ -162,7 +157,6 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                     monitor_lock = true;
                     placeTpAndSlOrders(apiParams, symbol, side, orig_qty, tpPrice, slPrice);
                 } else {
-                    std::cout << "NOT FILLED Params:\n" << orig_qty << "\t" << tpPrice << "\t" << slPrice << "\n";
                     std::cout << "Not filled yet, will check again later.\n";
                 }
             }
@@ -401,17 +395,17 @@ namespace Signaling {
             if (isCurrentTimeInRange(newsDateRange)) {
                 continue;
             }
-            std::cout << "Current datetime is not within the news date range." << std::endl;
+            // std::cout << "Current datetime is not within the news date range." << std::endl;
 
             auto deactivateDateRange = fetchDeactivateDateRange();
             std::time_t deactivateMinTime = std::chrono::system_clock::to_time_t(deactivateDateRange.first);
             std::time_t deactivateMaxTime = std::chrono::system_clock::to_time_t(deactivateDateRange.second);
-            std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            // std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
 
             if (isCurrentTimeInRange(deactivateDateRange)) {
                 continue;
             }
-            std::cout << "Current datetime is NOT within the deactivate date range." << std::endl;
+            // std::cout << "Current datetime is NOT within the deactivate date range." << std::endl;
              
 
             auto [datetime, signal, lag] = readSignal();
@@ -423,17 +417,17 @@ namespace Signaling {
             }
 
             if (signal == 0) {
-                std::cout << "Signaling received: DO NOTHING" << std::endl;
+                // std::cout << "Signaling received: DO NOTHING" << std::endl;
                 continue;
             }
 
             if (datetime.empty()) {
-                std::cout << "No valid signal received." << std::endl;
+                // std::cout << "No valid signal received." << std::endl;
                 continue;
             }
 
             if (datetime == prev_datetime) {
-                std::cout << "Signal datetime has not changed. Skipping execution." << std::endl;
+                // std::cout << "Signal datetime has not changed. Skipping execution." << std::endl;
                 continue;
             }
 
