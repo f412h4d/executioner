@@ -389,9 +389,14 @@ namespace Signaling {
         double last_sl_price = 0;
         bool monitor_lock = true;
 
-        auto newsDateRange = fetchNewsDateRange();
+        // auto newsDateRange = fetchNewsDateRange();
 
         while (true) {
+            auto newsDateRange = fetchNewsDateRange();
+            std::time_t newsMinTime = std::chrono::system_clock::to_time_t(newsDateRange.first);
+            std::time_t newsMaxTime = std::chrono::system_clock::to_time_t(newsDateRange.second);
+            std::cout << "News Date Range: " << std::put_time(std::localtime(&newsMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&newsMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            
             if (isCurrentTimeInRange(newsDateRange)) {
                 continue;
             }
@@ -400,7 +405,7 @@ namespace Signaling {
             auto deactivateDateRange = fetchDeactivateDateRange();
             std::time_t deactivateMinTime = std::chrono::system_clock::to_time_t(deactivateDateRange.first);
             std::time_t deactivateMaxTime = std::chrono::system_clock::to_time_t(deactivateDateRange.second);
-            // std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
 
             if (isCurrentTimeInRange(deactivateDateRange)) {
                 continue;
