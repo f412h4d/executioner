@@ -35,7 +35,6 @@ bool prepareForOrder(const APIParams &apiParams) {
     std::cout << "\n\nLogs:\n\n";
     std::cout << "Positions Resp:\n" << positions_response.dump(4) << "\n------------------------";
     std::cout << "Open Orders Resp:\n" << open_orders_response.dump(4) << "\n\n\n\n";
-
     if (open_orders_response.is_array()) {
         array_length = open_orders_response.size();
     } else {
@@ -70,9 +69,8 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
                         double slPrice) {
     int signal = side == "SELL" ? 1:-1;
     auto price = Margin::getPrice(apiParams, "BTCUSDT");
-    double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-    double newTpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-    double newSlPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+    double newTpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+    double newSlPrice = roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
     std::cout << "-------------------\nSignal:\t" << signal << std::endl;
     std::cout << "-------------------\nPRICE:\t" << price << std::endl;
@@ -228,10 +226,6 @@ void processSignal(int signal,
                 auto price = Margin::getPrice(apiParams, "BTCUSDT");
                 double orig_price = price * (1 + (CALC_PRICE_PERCENTAGE * signal));
                 double calculated_price = roundToTickSize(orig_price, TICK_SIZE);
-                std::cout << "Orig:\t" << orig_price << std::endl;
-                std::cout << "Rounded:\t" << calculated_price << std::endl;
-                double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
                 OrderInput order(
                         "BTCUSDT",
