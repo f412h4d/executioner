@@ -65,8 +65,7 @@ double roundToTickSize(double price, double tick_size) {
     return std::round(price / tick_size) * tick_size;
 }
 
-void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, const std::string &side, double orig_qty, double tpPrice,
-                        double slPrice) {
+void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, const std::string &side, double orig_qty) {
     int signal = side == "SELL" ? 1:-1;
     auto price = Margin::getPrice(apiParams, "BTCUSDT");
     double newTpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
@@ -126,14 +125,12 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                               const std::string &side,
                               std::string &order_id,
                               double &orig_qty,
-                              double &tpPrice,
-                              double &slPrice,
                               bool &monitor_lock) {
     std::cout << "Monitor Order Status will run in 1 secs.\n";
     signalQueue.addEvent(
             TIME::now() + std::chrono::seconds(MONITOR_DELAY),
             "Monitor Order Status",
-            [&apiParams, &symbol, &side, &order_id, &orig_qty, &tpPrice, &slPrice, &monitor_lock]() {
+            [&apiParams, &symbol, &side, &order_id, &orig_qty, &monitor_lock]() {
                 if (monitor_lock) {
                     std::cout << "Monitoring is locked, waiting for the order to be executed.\n";
                     return;
@@ -153,7 +150,7 @@ void monitorOrderAndPlaceTpSl(SignalQueue &signalQueue,
                 if (isOrderFilled(apiParams)) {
                     std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n" << "Order Is FILLED Adding TP & SL\n";
                     monitor_lock = true;
-                    placeTpAndSlOrders(apiParams, symbol, side, orig_qty, tpPrice, slPrice);
+                    placeTpAndSlOrders(apiParams, symbol, side, orig_qty);
                 } else {
                     std::cout << "Not filled yet, will check again later.\n";
                 }
