@@ -2,6 +2,7 @@
 #include <cpr/cpr.h>
 
 #include "utils.h"
+#include "margin.h"
 #include "signaling.h"
 #include "APIParams.h"
 
@@ -26,5 +27,6 @@ int main() {
             5000,
             env["TESTNET"] == "TRUE"
     );
+    Margin::setLeverage(apiParams, "BTCUSDT", 1);
     Signaling::init(apiParams);
 }

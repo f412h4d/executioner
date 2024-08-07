@@ -25,6 +25,12 @@ namespace Margin {
             const APIParams &apiParams,
             const std::string &asset
     );
+
+    nlohmann::json setLeverage(
+            const APIParams &apiParams,
+            const std::string &symbol,
+            int leverage
+    );
 }
 
 #endif // MARGIN_H
