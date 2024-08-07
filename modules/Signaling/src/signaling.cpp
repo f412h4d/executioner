@@ -14,8 +14,8 @@
 #define CANCEL_DELAY 3001 // Open Order Elimination
 #define MONITOR_DELAY 1
 #define CALC_PRICE_PERCENTAGE (-0.0008) // Entry Gap needs to be minus
-#define TP_PRICE_PERCENTAGE 0.014
-#define SL_PRICE_PERCENTAGE (-0.01)
+#define TP_PRICE_PERCENTAGE 0.015
+#define SL_PRICE_PERCENTAGE (-0.009)
 
 #define TICK_SIZE 0.1
 
