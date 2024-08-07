@@ -16,8 +16,9 @@ namespace Margin {
         std::string url = baseUrl + "/" + apiCall + "?symbol=" + symbol;
 
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
-        std::cout << "Response Code: " << r.status_code << std::endl;
-        std::cout << "Response Text: " << r.text << std::endl;
+        // FIXME: use logs instead!
+        // std::cout << "Response Code: " << r.status_code << std::endl;
+        // std::cout << "Response Text: " << r.text << std::endl;
 
         return std::stod(nlohmann::json::parse(r.text)["price"].get<std::string>());
     }
@@ -61,13 +62,14 @@ namespace Margin {
         std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
 
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
-        std::cout << "Response Code: " << r.status_code << std::endl;
-        std::cout << "Response Text: " << r.text << std::endl;
+        // FIXME: use logs instead!
+        // std::cout << "Response Code: " << r.status_code << std::endl;
+        // std::cout << "Response Text: " << r.text << std::endl;
 
         return nlohmann::json::parse(r.text);
     }
 
-    nlohmann::json getBalance(
+    double getBalance(
             const APIParams &apiParams,
             const std::string &asset
     ) {
@@ -81,19 +83,19 @@ namespace Margin {
         std::string url = baseUrl + "/" + apiCall + "?" + params + "&signature=" + Utils::urlEncode(signature);
 
         cpr::Response r = cpr::Get(cpr::Url{url}, cpr::Header{{"X-MBX-APIKEY", apiParams.apiKey}});
-        std::cout << "Response Code: " << r.status_code << std::endl;
-        std::cout << "Response Text: " << r.text << std::endl;
+        // FIXME: use logs instead!
+        // std::cout << "Response Code: " << r.status_code << std::endl;
+        // std::cout << "Response Text: " << r.text << std::endl;
 
         nlohmann::json jsonResponse = nlohmann::json::parse(r.text);
 
         // Filter the response to get the balance of the specified asset
         for (const auto &balance: jsonResponse["assets"]) {
             if (balance["asset"] == asset) {
-                return balance;
+                return std::stod(balance["availableBalance"].get<std::string>());
             }
         }
 
-        // If the asset is not found, return an empty JSON object
-        return nlohmann::json::object();
+        return 0;
     }
 }

@@ -21,7 +21,7 @@ namespace Margin {
             const std::string &symbol
     );
 
-    nlohmann::json getBalance(
+    double getBalance(
             const APIParams &apiParams,
             const std::string &asset
     );

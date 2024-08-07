@@ -32,9 +32,6 @@ bool prepareForOrder(const APIParams &apiParams) {
     }
 
     auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-    std::cout << "\n\nLogs:\n\n";
-    std::cout << "Positions Resp:\n" << positions_response.dump(4) << "\n------------------------";
-    std::cout << "Open Orders Resp:\n" << open_orders_response.dump(4) << "\n\n\n\n";
     if (open_orders_response.is_array()) {
         array_length = open_orders_response.size();
     } else {
@@ -70,13 +67,6 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
     auto price = Margin::getPrice(apiParams, "BTCUSDT");
     double newTpPrice = roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
     double newSlPrice = roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-
-    std::cout << "-------------------\nSignal:\t" << signal << std::endl;
-    std::cout << "-------------------\nPRICE:\t" << price << std::endl;
-    std::cout << "-------------------\nTP Percent:\t" << TP_PRICE_PERCENTAGE << std::endl;
-    std::cout << "-------------------\nSL Percent:\t" << SL_PRICE_PERCENTAGE << std::endl;
-    std::cout << "-------------------\nTP:\t" << newTpPrice << std::endl;
-    std::cout << "-------------------\nSL:\t" << newSlPrice << std::endl;
 
     TriggerOrderInput tpOrder(
             symbol,
@@ -219,16 +209,19 @@ void processSignal(int signal,
                 }
 
                 auto price = Margin::getPrice(apiParams, "BTCUSDT");
+                auto balance = Margin::getBalance(apiParams, "USDT");
+                double quantity = std::floor((balance * 0.98 / price) * 1000) / 1000; // Ensure quantity has no more than 3 decimal places
+
                 double orig_price = price * (1 + (CALC_PRICE_PERCENTAGE * signal));
                 double calculated_price = roundToTickSize(orig_price, TICK_SIZE);
 
                 OrderInput order(
-                        "BTCUSDT",
-                        side,
-                        "LIMIT",
-                        "GTC",
-                        0.005,
-                        calculated_price
+                    "BTCUSDT",
+                    side,
+                    "LIMIT",
+                    "GTC",
+                    quantity,
+                    calculated_price
                 );
 
                 auto order_response = OrderService::createOrder(apiParams, order);

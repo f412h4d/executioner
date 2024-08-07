@@ -4,7 +4,6 @@
 #include "utils.h"
 #include "signaling.h"
 #include "APIParams.h"
-#include "modules/TimedEventQueue/headers/SignalQueue.h"
 
 int main() {
     std::string exePath = Utils::getExecutablePath();
