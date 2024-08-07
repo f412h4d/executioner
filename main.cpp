@@ -27,6 +27,6 @@ int main() {
             5000,
             env["TESTNET"] == "TRUE"
     );
-    Margin::setLeverage(apiParams, "BTCUSDT", 1);
+    Margin::setLeverage(apiParams, "BTCUSDT", 5);
     Signaling::init(apiParams);
 }
