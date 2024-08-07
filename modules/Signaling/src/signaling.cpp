@@ -206,8 +206,6 @@ void processSignal(int signal,
                    const std::string &side,
                    std::string &last_order_id,
                    double &last_orig_qty,
-                   double &last_tp_price,
-                   double &last_sl_price,
                    bool &monitor_lock
 ) {
     std::cout << "Signaling received: " << side << std::endl;
@@ -217,7 +215,7 @@ void processSignal(int signal,
     signalQueue.addEvent(
             TIME::now() + std::chrono::seconds(EXEC_DELAY),
             "Signal is executed.",
-            [&apiParams, signal, side, &last_order_id, &last_orig_qty, &last_tp_price, &last_sl_price, &monitor_lock]() {
+            [&apiParams, signal, side, &last_order_id, &last_orig_qty, &monitor_lock]() {
                 bool validConditions = prepareForOrder(apiParams);
                 if (!validConditions) {
                     return;
@@ -258,8 +256,6 @@ void processSignal(int signal,
                     std::cout << "Order after creation: " << orderId << std::endl;
                     last_order_id = orderId;
                     last_orig_qty = orig_qty;
-                    last_tp_price = tpPrice;
-                    last_sl_price = slPrice;
                     monitor_lock = false;
 
 
@@ -383,17 +379,13 @@ namespace Signaling {
 
         std::string last_order_id = "none";
         double last_orig_qty = 0;
-        double last_tp_price = 0;
-        double last_sl_price = 0;
         bool monitor_lock = true;
-
-        // auto newsDateRange = fetchNewsDateRange();
 
         while (true) {
             auto newsDateRange = fetchNewsDateRange();
             std::time_t newsMinTime = std::chrono::system_clock::to_time_t(newsDateRange.first);
             std::time_t newsMaxTime = std::chrono::system_clock::to_time_t(newsDateRange.second);
-            std::cout << "News Date Range: " << std::put_time(std::localtime(&newsMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&newsMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            // std::cout << "News Date Range: " << std::put_time(std::localtime(&newsMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&newsMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
             
             if (isCurrentTimeInRange(newsDateRange)) {
                 continue;
@@ -403,7 +395,7 @@ namespace Signaling {
             auto deactivateDateRange = fetchDeactivateDateRange();
             std::time_t deactivateMinTime = std::chrono::system_clock::to_time_t(deactivateDateRange.first);
             std::time_t deactivateMaxTime = std::chrono::system_clock::to_time_t(deactivateDateRange.second);
-            std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
+            // std::cout << "Deactivate Date Range: " << std::put_time(std::localtime(&deactivateMinTime), "%Y-%m-%d %H:%M:%S") << " to " << std::put_time(std::localtime(&deactivateMaxTime), "%Y-%m-%d %H:%M:%S") << std::endl;
 
             if (isCurrentTimeInRange(deactivateDateRange)) {
                 continue;
@@ -421,9 +413,7 @@ namespace Signaling {
             }
 
             if (!monitor_lock) {
-                std::cout << "-> Adding new monitor event. \n";
-                monitorOrderAndPlaceTpSl(tpSlQueue, apiParams, "BTCUSDT", signal == 1 ? "SELL":"BUY", last_order_id, last_orig_qty, last_tp_price,
-                                         last_sl_price, monitor_lock);
+                monitorOrderAndPlaceTpSl(tpSlQueue, apiParams, "BTCUSDT", signal == 1 ? "SELL":"BUY", last_order_id, last_orig_qty, monitor_lock);
             }
 
             if (signal == 0) {
@@ -444,12 +434,10 @@ namespace Signaling {
             prev_datetime = datetime;
 
             if (signal == 1) {
-                processSignal(signal, apiParams, signalQueue, "BUY", last_order_id, last_orig_qty, last_tp_price,
-                              last_sl_price, monitor_lock);
+                processSignal(signal, apiParams, signalQueue, "BUY", last_order_id, last_orig_qty, monitor_lock);
                 cancelWithDelay(signal, apiParams, signalQueue, tpSlQueue, monitor_lock);
             } else if (signal == -1) {
-                processSignal(signal, apiParams, signalQueue, "SELL", last_order_id, last_orig_qty, last_tp_price,
-                              last_sl_price, monitor_lock);
+                processSignal(signal, apiParams, signalQueue, "SELL", last_order_id, last_orig_qty, monitor_lock);
                 cancelWithDelay(signal, apiParams, signalQueue, tpSlQueue, monitor_lock);
             }
         }
