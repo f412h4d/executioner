@@ -41,14 +41,11 @@ public:
         std::string message = boost::beast::buffers_to_string(buffer_.data());
         std::cout << "Price Update Received: " << message << std::endl;
 
-        // Parse the message to extract the price
         auto json_message = nlohmann::json::parse(message);
         double price = json_message["p"].get<double>();
 
-        // Calculate 95% of the price
         double calc_price = price * 0.95;
 
-        // Update the shared state
         {
             std::lock_guard<std::mutex> lock(price_mutex_);
             *calculated_price_ = calc_price;
@@ -63,6 +60,15 @@ public:
                         shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2));
+    }
+
+    void start_keep_alive() override {
+        keep_alive_thread_ = std::thread([this]() {
+            while (keep_alive_running_) {
+                std::this_thread::sleep_for(std::chrono::minutes(30));
+                // Custom keep-alive logic for price_session
+            }
+        });
     }
 
 private:

@@ -12,6 +12,9 @@
 #include <string>
 #include <iostream>
 #include "APIParams.h"
+#include <thread>
+#include <atomic>
+
 using tcp = boost::asio::ip::tcp;
 namespace ssl = boost::asio::ssl;
 namespace websocket = boost::beast::websocket;
@@ -25,11 +28,16 @@ protected:
     APIParams api_params_;
     std::string listen_key_;
 
+    std::thread keep_alive_thread_;
+    std::atomic<bool> keep_alive_running_{true};
+
 public:
     explicit session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams& api_params)
             : resolver_(ioc), ws_(ioc, ctx), api_params_(api_params) {}
 
-    virtual ~session() = default;
+    virtual ~session() {
+        stop_keep_alive();
+    }
 
     virtual void run(const std::string &host, const std::string &port) {
         host_ = host;
@@ -136,6 +144,22 @@ public:
                         shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2));
+    }
+
+    virtual void start_keep_alive() {
+        keep_alive_thread_ = std::thread([this]() {
+            while (keep_alive_running_) {
+                std::this_thread::sleep_for(std::chrono::minutes(30));
+                // Logic for keeping the connection alive or refreshing it
+            }
+        });
+    }
+
+    void stop_keep_alive() {
+        keep_alive_running_ = false;
+        if (keep_alive_thread_.joinable()) {
+            keep_alive_thread_.join();
+        }
     }
 
     static void fail(boost::system::error_code ec, char const *what) {

@@ -49,7 +49,6 @@ public:
         std::string message = boost::beast::buffers_to_string(buffer_.data());
         std::cout << "Order Update Received: " << message << std::endl;
 
-        // Access the shared calculated price
         double calc_price;
         {
             std::lock_guard<std::mutex> lock(price_mutex_);
@@ -63,6 +62,15 @@ public:
         ws_.async_read(
                 buffer_,
                 [capture0 = shared_from_this()](auto && PH1, auto && PH2) { capture0->on_read(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
+    }
+
+    void start_keep_alive() override {
+        keep_alive_thread_ = std::thread([this]() {
+            while (keep_alive_running_) {
+                std::this_thread::sleep_for(std::chrono::minutes(30));
+                refresh_listen_key();
+            }
+        });
     }
 
 private:
@@ -89,9 +97,6 @@ private:
             std::cerr << "Failed to refresh listenKey: " << r.status_code << " " << r.text << std::endl;
         }
     }
-
-    std::thread keep_alive_thread_;
-    std::atomic<bool> keep_alive_running_{true};
 };
 
 #endif // EVENT_ORDER_UPDATE_SESSION_HPP
