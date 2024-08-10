@@ -1,9 +1,10 @@
 #include "../headers/utils.h"
+#include <cmath>
 #include <fstream>
 #include <sstream>
 #include <unistd.h>
 #include <climits>
-#include <openssl/hmac.h>
+#include <openssl/hmac.h> 
 #include <openssl/sha.h>
 #include <iomanip>
 #include <iostream>
@@ -102,5 +103,10 @@ namespace Utils {
         }
 
         return {mdString};
+    }
+
+
+    double roundToTickSize(double price, double tick_size) {
+        return std::round(price / tick_size) * tick_size;
     }
 }

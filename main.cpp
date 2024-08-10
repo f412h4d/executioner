@@ -1,13 +1,10 @@
 #include <thread>
 #include <vector>
 #include <memory>
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 
 #include "utils.h"
 #include "APIParams.h"
 #include "modules/Websocket/headers/root_certificates.hpp"
-#include "modules/Websocket/headers/session.hpp"
 #include "modules/Websocket/headers/price_session.hpp"
 #include "modules/Websocket/headers/event_order_update_session.hpp"
 #include <boost/asio/io_context.hpp>
@@ -21,12 +18,6 @@ void run_websocket_session(std::shared_ptr<boost::asio::io_context> ioc, std::sh
 }
 
 int main() {
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] [thread %t] %v");
-    auto logger = spdlog::stdout_color_mt("my_logger");
-    logger->info("This is an info message");
-    logger->warn("This is a warning message");
-    logger->error("This is an Error message");
-
     std::string exePath = Utils::getExecutablePath();
     std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
     std::string envFilePath = exeDir + "/../.env";
@@ -40,7 +31,7 @@ int main() {
             apiKey,
             apiSecret,
             5000,
-            env["TESTNET"] == "TRUE"
+            useTestnet
     );
 
     // List of threads to run WebSocket sessions
@@ -51,8 +42,7 @@ int main() {
     load_root_certificates(*ctx);
 
     // Run the WebSocket sessions in new threads
-//    threads.emplace_back(run_websocket_session<session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
-//    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
+    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
     auto event_order_session = std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams);
     threads.emplace_back([&]() { event_order_session->run("fstream.binance.com", "443"); ioc->run(); });
 

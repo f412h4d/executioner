@@ -4,6 +4,7 @@
 # CMAKE
 cmake-build-debug
 build
+.cache
 
 # env
 .env

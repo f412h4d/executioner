@@ -12,7 +12,6 @@
 #include <string>
 #include <iostream>
 #include "APIParams.h"
-
 using tcp = boost::asio::ip::tcp;
 namespace ssl = boost::asio::ssl;
 namespace websocket = boost::beast::websocket;

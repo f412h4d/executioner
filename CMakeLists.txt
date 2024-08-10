@@ -9,6 +9,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 # Include directories
 include_directories(modules/News/headers)
+include_directories(modules/Logger/headers)
 include_directories(modules/Utils/headers)
 include_directories(modules/Margin/headers)
 include_directories(modules/Signaling/headers)

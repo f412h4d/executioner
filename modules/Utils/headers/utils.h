@@ -18,6 +18,8 @@ namespace Utils {
     std::string urlEncode(const std::string &value);
 
     std::string HMAC_SHA256(const std::string &key, const std::string &data);
+
+    double roundToTickSize(double price, double tick_size);
 }
 
 #endif //UTILS_H

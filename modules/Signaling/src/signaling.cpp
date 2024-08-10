@@ -3,6 +3,7 @@
 #include "margin.h"
 #include "utils.h"
 #include "news.h"
+#include "logger.h"
 #include "../../TimedEventQueue/headers/SignalQueue.h"
 
 #include <iostream>
@@ -26,60 +27,57 @@ bool prepareForOrder(const APIParams &apiParams) {
     auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
     if (positions_response.is_array() && positions_response[0].contains("notional")) {
         notional = positions_response[0]["notional"].get<std::string>();
+        Logger::margin_logger->debug("Notional is fetched: {}", notional);
     } else {
-        std::cerr << "Notional not found in the response" << std::endl;
+        Logger::margin_logger->error("Notional not found in the response");
+        Logger::margin_logger->info("Signal aborted");
         return false;
     }
 
     auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-    std::cout << "\n\nLogs:\n\n";
-    std::cout << "Positions Resp:\n" << positions_response.dump(4) << "\n------------------------";
-    std::cout << "Open Orders Resp:\n" << open_orders_response.dump(4) << "\n\n\n\n";
 
     if (open_orders_response.is_array()) {
         array_length = open_orders_response.size();
+        Logger::margin_logger->debug("Open orders size fetched & calculated: {}", array_length);
     } else {
-        std::cerr << "Unexpected response format: " << open_orders_response.dump(4) << std::endl;
+        Logger::margin_logger->error("Unexpected response format: {}", open_orders_response.dump(4));
+        Logger::margin_logger->info("Signal aborted");
         return false;
     }
 
     if (notional != "0") {
-        std::cerr << "Notional is not 0. skipping to the next signal" << std::endl;
+        Logger::margin_logger->info("Notional is not 0");
+        Logger::margin_logger->info("Signal aborted");
         return false;
     }
 
-    if (array_length >= 1) {
-        for (const auto& order : open_orders_response) {
-            if (order.contains("origType") && order["origType"] == "LIMIT") {
-                return false;
-            }
-        }
-
-        auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-        std::cout << "Cancel All Orders Response: " << response.dump(4) << std::endl;
+    if (array_length < 1) {
+        Logger::margin_logger->info("Signal accepted");
+        return true;
     }
 
+    for (const auto& order : open_orders_response) {
+        if (order.contains("origType") && order["origType"] == "LIMIT") {
+            Logger::margin_logger->info("Detected LIMIT order in open orders list");
+            Logger::margin_logger->info("Signal aborted");
+            return false;
+        }
+    }
+
+    Logger::margin_logger->info("Running Cancel all for pre-executaion clean up");
+    auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
+    Logger::margin_logger->debug("Canceled all orders: {}", response.dump(4));
     return true;
 }
 
-double roundToTickSize(double price, double tick_size) {
-    return std::round(price / tick_size) * tick_size;
-}
 
 void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, const std::string &side, double orig_qty, double tpPrice,
                         double slPrice) {
     int signal = side == "SELL" ? 1:-1;
     auto price = Margin::getPrice(apiParams, "BTCUSDT");
-    double calculated_price = roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-    double newTpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-    double newSlPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-
-    std::cout << "-------------------\nSignal:\t" << signal << std::endl;
-    std::cout << "-------------------\nPRICE:\t" << price << std::endl;
-    std::cout << "-------------------\nTP Percent:\t" << TP_PRICE_PERCENTAGE << std::endl;
-    std::cout << "-------------------\nSL Percent:\t" << SL_PRICE_PERCENTAGE << std::endl;
-    std::cout << "-------------------\nTP:\t" << newTpPrice << std::endl;
-    std::cout << "-------------------\nSL:\t" << newSlPrice << std::endl;
+    double calculated_price = Utils::roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+    double newTpPrice = Utils::roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+    double newSlPrice = Utils::roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
     TriggerOrderInput tpOrder(
             symbol,
@@ -227,11 +225,9 @@ void processSignal(int signal,
 
                 auto price = Margin::getPrice(apiParams, "BTCUSDT");
                 double orig_price = price * (1 + (CALC_PRICE_PERCENTAGE * signal));
-                double calculated_price = roundToTickSize(orig_price, TICK_SIZE);
-                std::cout << "Orig:\t" << orig_price << std::endl;
-                std::cout << "Rounded:\t" << calculated_price << std::endl;
-                double tpPrice = roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-                double slPrice = roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                double calculated_price = Utils::roundToTickSize(orig_price, TICK_SIZE);
+                double tpPrice = Utils::roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+                double slPrice = Utils::roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
                 OrderInput order(
                         "BTCUSDT",
