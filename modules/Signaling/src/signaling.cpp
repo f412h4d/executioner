@@ -210,13 +210,11 @@ void processSignal(int signal,
                    double &last_sl_price,
                    bool &monitor_lock
 ) {
-    std::cout << "Signaling received: " << side << std::endl;
-    std::cout << "Signal " << signal << " is going to be executed in " + std::to_string(EXEC_DELAY) + " seconds"
-              << std::endl;
+    Logger::margin_logger->debug("Signal: {}, Planed to be executed in: {}", signal, EXEC_DELAY);
 
     signalQueue.addEvent(
             TIME::now() + std::chrono::seconds(EXEC_DELAY),
-            "Signal is executed.",
+            "Execution is triggered",
             [&apiParams, signal, side, &last_order_id, &last_orig_qty, &last_tp_price, &last_sl_price, &monitor_lock]() {
                 bool validConditions = prepareForOrder(apiParams);
                 if (!validConditions) {
