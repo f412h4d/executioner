@@ -17,6 +17,10 @@ void run_websocket_session(std::shared_ptr<boost::asio::io_context> ioc, std::sh
     ioc->run();
 }
 
+// Shared state for the calculated price
+auto calculated_price = std::make_shared<double>(0.0);
+std::mutex price_mutex;
+
 int main() {
     std::string exePath = Utils::getExecutablePath();
     std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
@@ -42,12 +46,14 @@ int main() {
     load_root_certificates(*ctx);
 
     // Run the WebSocket sessions in new threads
-    threads.emplace_back(run_websocket_session<price_session>, ioc, ctx, "fstream.binance.com", "443", apiParams);
-    auto event_order_session = std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams);
-    threads.emplace_back([&]() { event_order_session->run("fstream.binance.com", "443"); ioc->run(); });
+    threads.emplace_back([&, ioc, ctx]() {
+        auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
+        price_session_instance->run("fstream.binance.com", "443");
+        ioc->run();
+    });
 
-    // Start the keep-alive thread for event_order_update_session
-    event_order_session->start_keep_alive();
+    auto event_order_session = std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
+    threads.emplace_back([&]() { event_order_session->run("fstream.binance.com", "443"); ioc->run(); });
 
     // Wait for all threads to finish
     for (auto& thread : threads) {

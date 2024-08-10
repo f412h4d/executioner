@@ -8,10 +8,12 @@
 
 class event_order_update_session : public session {
 public:
-    using session::session;
+    event_order_update_session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams& api_params,
+                               std::shared_ptr<double> calc_price, std::mutex &mutex)
+            : session(ioc, ctx, api_params), calculated_price_(calc_price), price_mutex_(mutex) {}
 
     void run(const std::string &host, const std::string &port) override {
-        listen_key_ = get_listen_key(); // Ensure listen_key_ is defined in the base class
+        listen_key_ = get_listen_key(); 
         if (listen_key_.empty()) {
             std::cerr << "Failed to get listenKey" << std::endl;
             return;
@@ -47,6 +49,15 @@ public:
         std::string message = boost::beast::buffers_to_string(buffer_.data());
         std::cout << "Order Update Received: " << message << std::endl;
 
+        // Access the shared calculated price
+        double calc_price;
+        {
+            std::lock_guard<std::mutex> lock(price_mutex_);
+            calc_price = *calculated_price_;
+        }
+
+        std::cout << "Current Calculated Price (95%): " << calc_price << std::endl;
+
         buffer_.consume(buffer_.size());
 
         ws_.async_read(
@@ -54,27 +65,10 @@ public:
                 [capture0 = shared_from_this()](auto && PH1, auto && PH2) { capture0->on_read(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
     }
 
-    void start_keep_alive() {
-        keep_alive_thread_ = std::thread([this]() {
-            while (keep_alive_running_) {
-                std::this_thread::sleep_for(std::chrono::minutes(30));
-                refresh_listen_key();
-            }
-        });
-    }
-
-    void stop_keep_alive() {
-        keep_alive_running_ = false;
-        if (keep_alive_thread_.joinable()) {
-            keep_alive_thread_.join();
-        }
-    }
-
-    ~event_order_update_session() override {
-        stop_keep_alive();
-    }
-
 private:
+    std::shared_ptr<double> calculated_price_;
+    std::mutex &price_mutex_;
+
     std::string get_listen_key() {
         cpr::Response r = cpr::Post(cpr::Url{"https://fapi.binance.com/fapi/v1/listenKey"},
                                     cpr::Header{{"X-MBX-APIKEY", api_params_.apiKey}});
