@@ -38,8 +38,15 @@ int main() {
     auto ctx = std::make_shared<ssl::context>(ssl::context::sslv23_client);
     load_root_certificates(*ctx);
 
+    auto session_instance = std::make_shared<session>(*ioc, *ctx, apiParams);
     threads.emplace_back([&, ioc, ctx]() {
-        auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
+        session_instance->run("fstream.binance.com", "443");
+        session_instance->start_keep_alive();
+        ioc->run();
+    });
+
+    auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
+    threads.emplace_back([&, ioc, ctx]() {
         price_session_instance->run("fstream.binance.com", "443");
         price_session_instance->start_keep_alive();
         ioc->run();
