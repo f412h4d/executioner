@@ -18,10 +18,11 @@ public:
     }
 
     void send_subscribe_message() override {
+        // Simplified subscription to a specific ticker stream
         nlohmann::json j;
-        j["id"] = "price-subscribe-id";  // Use a unique ID or UUID for production
-        j["method"] = "ticker.price";    // The method for price ticker
-        j["params"] = { { "symbol", "BTCUSDT" } };  // The symbol parameter as per documentation
+        j["id"] = "price-subscribe-id";
+        j["method"] = "SUBSCRIBE";
+        j["params"] = {"ethusdt@ticker"};
 
         ws_.async_write(
             boost::asio::buffer(j.dump()),
@@ -43,8 +44,8 @@ public:
 
         auto json_message = nlohmann::json::parse(message);
 
-        if (json_message.contains("result") && json_message["result"].contains("price")) {
-            double price = std::stod(json_message["result"]["price"].get<std::string>());
+        if (json_message.contains("p")) {
+            double price = std::stod(json_message["p"].get<std::string>());
             double calc_price = price * 0.95;
 
             {
