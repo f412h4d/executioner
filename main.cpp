@@ -10,7 +10,6 @@
 #include "modules/Websocket/headers/event_order_update_session.hpp"
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl/context.hpp>
-
 // Shared state for the calculated price
 auto calculated_price = std::make_shared<double>(0.0);
 std::mutex price_mutex;
@@ -37,13 +36,6 @@ int main() {
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto ctx = std::make_shared<ssl::context>(ssl::context::sslv23_client);
     load_root_certificates(*ctx);
-
-    auto session_instance = std::make_shared<session>(*ioc, *ctx, apiParams);
-    threads.emplace_back([&, ioc, ctx]() {
-        session_instance->run("fstream.binance.com", "443");
-        session_instance->start_keep_alive();
-        ioc->run();
-    });
 
     auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
     threads.emplace_back([&, ioc, ctx]() {

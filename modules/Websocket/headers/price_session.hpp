@@ -19,17 +19,17 @@ public:
 
     void send_subscribe_message() override {
         nlohmann::json j;
-        j["id"] = "price-subscribe-id";
-        j["method"] = "SUBSCRIBE";
-        j["params"] = {"btcusdt@ticker"};
+        j["id"] = "price-subscribe-id";  // Use a unique ID or UUID for production
+        j["method"] = "ticker.price";    // The method for price ticker
+        j["params"] = { { "symbol", "BTCUSDT" } };  // The symbol parameter as per documentation
 
         ws_.async_write(
-                boost::asio::buffer(j.dump()),
-                std::bind(
-                        &session::on_write,
-                        shared_from_this(),
-                        std::placeholders::_1,
-                        std::placeholders::_2));
+            boost::asio::buffer(j.dump()),
+            std::bind(
+                &session::on_write,
+                shared_from_this(),
+                std::placeholders::_1,
+                std::placeholders::_2));
     }
 
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred) override {
@@ -42,24 +42,42 @@ public:
         std::cout << "Price Update Received: " << message << std::endl;
 
         auto json_message = nlohmann::json::parse(message);
-        double price = json_message["p"].get<double>();
 
-        double calc_price = price * 0.95;
+        if (json_message.contains("result") && json_message["result"].contains("price")) {
+            double price = std::stod(json_message["result"]["price"].get<std::string>());
+            double calc_price = price * 0.95;
 
-        {
-            std::lock_guard<std::mutex> lock(price_mutex_);
-            *calculated_price_ = calc_price;
+            {
+                std::lock_guard<std::mutex> lock(price_mutex_);
+                *calculated_price_ = calc_price;
+            }
+
+            std::cout << "Calculated Price (95%): " << calc_price << std::endl;
         }
 
         buffer_.consume(buffer_.size());
 
         ws_.async_read(
-                buffer_,
-                std::bind(
-                        &session::on_read,
-                        shared_from_this(),
-                        std::placeholders::_1,
-                        std::placeholders::_2));
+            buffer_,
+            std::bind(
+                &session::on_read,
+                shared_from_this(),
+                std::placeholders::_1,
+                std::placeholders::_2));
+    }
+
+    void run(const std::string &host, const std::string &port) override {
+        // Connect to the WebSocket endpoint
+        host_ = host;
+
+        resolver_.async_resolve(
+            host,
+            port,
+            std::bind(
+                &session::on_resolve,
+                shared_from_this(),
+                std::placeholders::_1,
+                std::placeholders::_2));
     }
 
     void start_keep_alive() override {
