@@ -210,14 +210,15 @@ void processSignal(int signal,
 
                 auto price = Margin::getPrice(apiParams, "BTCUSDT");
                 auto balance = Margin::getBalance(apiParams, "USDT");
-                std::cout << "\n\nBalance:\t" << balance << std::endl;
-                std::cout << "Calculated Balance:\t" << balance * 1 * 0.95 << std::endl;
-                std::cout << "Price:\t" << price << std::endl;
-                std::cout << "Calculated Quantity:\t" << balance * 1 * 0.95 / price << std::endl;
-                double quantity = std::floor((balance * 1 * 0.95 / price) * 1000) / 1000; // Ensure quantity has no more than 3 decimal places
 
                 double orig_price = price * (1 + (CALC_PRICE_PERCENTAGE * signal));
                 double calculated_price = roundToTickSize(orig_price, TICK_SIZE);
+                double quantity = std::floor((balance * 1 / calculated_price) * 1000) / 1000;
+
+                std::cout << "\n\nBalance:\t" << balance << std::endl;
+                std::cout << "Price:\t" << price << std::endl;
+                std::cout << "Calculated Price:\t" << calculated_price << std::endl;
+                std::cout << "Calculated Quantity:\t" << quantity << std::endl;
 
                 OrderInput order(
                     "BTCUSDT",
