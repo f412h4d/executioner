@@ -6,7 +6,7 @@
 #include "utils.h"
 #include "APIParams.h"
 #include "modules/Websocket/headers/root_certificates.hpp"
-#include "modules/Websocket/headers/price_session.hpp"
+#include "modules/Websocket/headers/custom_session.hpp"
 #include "modules/Websocket/headers/event_order_update_session.hpp"
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl/context.hpp>
@@ -37,10 +37,9 @@ int main() {
     auto ctx = std::make_shared<ssl::context>(ssl::context::sslv23_client);
     load_root_certificates(*ctx);
 
-    auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
+    auto price_session_instance = std::make_shared<custom_session>(*ioc, *ctx);
     threads.emplace_back([&, ioc, ctx]() {
         price_session_instance->run("fstream.binance.com", "443");
-        price_session_instance->start_keep_alive();
         ioc->run();
     });
 
