@@ -3,6 +3,8 @@ project(executioner)
 
 set(CMAKE_CXX_STANDARD 23)
 
+# Remove preference for static libraries
+# set(BUILD_SHARED_LIBS OFF)  # This line is removed to allow dynamic linking
 
 # Include directories
 include_directories(modules/News/headers)
@@ -57,9 +59,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(openssl)
 
-
 # Find the OpenSSL package
 find_package(OpenSSL REQUIRED)
 
-# Link the libraries
+# Link the libraries dynamically (no need to force static linking)
 target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
