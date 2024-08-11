@@ -1,5 +1,5 @@
-#ifndef OLD_SESSION_HPP
-#define OLD_SESSION_HPP
+#ifndef USER_SESSION_HPP
+#define USER_SESSION_HPP
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -11,31 +11,41 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include "APIParams.h"
+#include <thread>
+#include <atomic>
 
 using tcp = boost::asio::ip::tcp;
 namespace ssl = boost::asio::ssl;
 namespace websocket = boost::beast::websocket;
 
-class old_session : public std::enable_shared_from_this<old_session> {
-    tcp::resolver resolver_;
-    std::string host_;
-
+class user_session : public std::enable_shared_from_this<user_session> {
 protected:
+    tcp::resolver resolver_;
     websocket::stream<ssl::stream<tcp::socket>> ws_;
     boost::beast::multi_buffer buffer_;
+    std::string host_;
+    APIParams api_params_;
+    std::string listen_key_;
+
+    std::thread keep_alive_thread_;
+    std::atomic<bool> keep_alive_running_{true};
+
 public:
-    explicit old_session(boost::asio::io_context &ioc, ssl::context &ctx)
-            : resolver_(ioc), ws_(ioc, ctx) {}
+    explicit user_session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams& api_params)
+            : resolver_(ioc), ws_(ioc, ctx), api_params_(api_params) {}
 
-    virtual ~old_session() = default;
+    virtual ~user_session() {
+        stop_keep_alive();
+    }
 
-    void run(const std::string &host, const std::string &port) {
+    virtual void run(const std::string &host, const std::string &port) {
         host_ = host;
         resolver_.async_resolve(
                 host,
                 port,
                 std::bind(
-                        &old_session::on_resolve,
+                        &user_session::on_resolve,
                         shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2));
@@ -50,7 +60,7 @@ public:
                 results.begin(),
                 results.end(),
                 std::bind(
-                        &old_session::on_connect,
+                        &user_session::on_connect,
                         shared_from_this(),
                         std::placeholders::_1));
     }
@@ -62,7 +72,7 @@ public:
         ws_.next_layer().async_handshake(
                 ssl::stream_base::client,
                 std::bind(
-                        &old_session::on_ssl_handshake,
+                        &user_session::on_ssl_handshake,
                         shared_from_this(),
                         std::placeholders::_1));
     }
@@ -71,9 +81,10 @@ public:
         if (ec)
             return fail(ec, "ssl_handshake");
 
-        ws_.async_handshake(host_, "/ws",
+        std::string websocket_url = "/ws/" + listen_key_;
+        ws_.async_handshake(host_, websocket_url,
                             std::bind(
-                                    &old_session::on_handshake,
+                                    &user_session::on_handshake,
                                     shared_from_this(),
                                     std::placeholders::_1));
     }
@@ -94,7 +105,7 @@ public:
         ws_.async_write(
                 boost::asio::buffer(j.dump()),
                 std::bind(
-                        &old_session::on_write,
+                        &user_session::on_write,
                         shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2));
@@ -109,7 +120,7 @@ public:
         ws_.async_read(
                 buffer_,
                 std::bind(
-                        &old_session::on_read,
+                        &user_session::on_read,
                         shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2));
@@ -129,10 +140,28 @@ public:
         ws_.async_read(
                 buffer_,
                 std::bind(
-                        &old_session::on_read,
+                        &user_session::on_read,
                         shared_from_this(),
                         std::placeholders::_1,
                         std::placeholders::_2));
+    }
+
+    virtual void start_keep_alive() {
+        keep_alive_thread_ = std::thread();
+        // ! FIXME
+// [this]() {
+//             while (keep_alive_running_) {
+//                 // std::this_thread::sleep_for(std::chrono::minutes(30));
+//                 // Logic for keeping the connection alive or refreshing it
+//             }
+//         }
+    }
+
+    void stop_keep_alive() {
+        keep_alive_running_ = false;
+        if (keep_alive_thread_.joinable()) {
+            keep_alive_thread_.join();
+        }
     }
 
     static void fail(boost::system::error_code ec, char const *what) {
@@ -140,4 +169,4 @@ public:
     }
 };
 
-#endif // OLD_SESSION_HPP
+#endif // USER_SESSION_HPP

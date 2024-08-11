@@ -3,14 +3,15 @@
 #include <memory>
 #include <mutex>
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ssl/context.hpp>
+
 #include "utils.h"
 #include "APIParams.h"
 #include "modules/Websocket/headers/root_certificates.hpp"
-#include "modules/Websocket/headers/custom_session.hpp"
-#include "modules/Websocket/headers/event_order_update_session.hpp"
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ssl/context.hpp>
-// Shared state for the calculated price
+#include "modules/Websocket/headers/Market/custom_session.hpp"
+#include "modules/Websocket/headers/User/event_order_update_session.hpp"
+
 auto calculated_price = std::make_shared<double>(0.0);
 std::mutex price_mutex;
 

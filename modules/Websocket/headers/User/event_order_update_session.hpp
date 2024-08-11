@@ -1,16 +1,14 @@
 #ifndef EVENT_ORDER_UPDATE_SESSION_HPP
 #define EVENT_ORDER_UPDATE_SESSION_HPP
 
-#include "session.hpp"
+#include "user_session.hpp"
 #include <iostream>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 
-class event_order_update_session : public session {
-public:
-    event_order_update_session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams& api_params,
+class event_order_update_session : public user_session { public: event_order_update_session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams& api_params,
                                std::shared_ptr<double> calc_price, std::mutex &mutex)
-            : session(ioc, ctx, api_params), calculated_price_(calc_price), price_mutex_(mutex) {}
+            : user_session(ioc, ctx, api_params), calculated_price_(calc_price), price_mutex_(mutex) {}
 
     void run(const std::string &host, const std::string &port) override {
         listen_key_ = get_listen_key(); 
@@ -18,7 +16,7 @@ public:
             std::cerr << "Failed to get listenKey" << std::endl;
             return;
         }
-        session::run(host, port);
+        user_session::run(host, port);
     }
 
     void on_handshake(boost::system::error_code ec) override {

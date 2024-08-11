@@ -1,11 +1,11 @@
-#ifndef CUSTOM_SESSION_HPP
-#define CUSTOM_SESSION_HPP
+#ifndef PRICE_SESSION_HPP
+#define PRICE_SESSION_HPP
 
-#include "old_session.hpp"
+#include "market_session.hpp"
 
-class custom_session : public old_session {
+class price_session : public market_session {
 public:
-    using old_session::old_session;
+    using market_session::market_session;
 
     void on_handshake(boost::system::error_code ec) override {
         if (ec)
@@ -43,4 +43,4 @@ public:
     }
 };
 
-#endif // CUSTOM_SESSION_HPP
+#endif // PRICE_SESSION_HPP

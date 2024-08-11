@@ -14,6 +14,8 @@ include_directories(modules/Utils/headers)
 include_directories(modules/Margin/headers)
 include_directories(modules/Signaling/headers)
 include_directories(modules/Websocket/headers)
+include_directories(modules/Websocket/headers/Market)
+include_directories(modules/Websocket/headers/User)
 
 include_directories(modules/Order/headers)
 include_directories(modules/Order/models/APIParams)
