@@ -1,16 +1,18 @@
 #ifndef PRICE_SESSION_HPP
 #define PRICE_SESSION_HPP
 
-#include "logger.h"
 #include "market_session.hpp"
+#include "price_settings.hpp"
+#include "spdlog/spdlog.h"
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
 
 class price_session : public market_session {
 public:
-  price_session(boost::asio::io_context &ioc, ssl::context &ctx, std::shared_ptr<double> calc_price, std::mutex &mutex)
-      : market_session(ioc, ctx), calculated_price_(calc_price), price_mutex_(mutex) {}
+  price_session(boost::asio::io_context &ioc, ssl::context &ctx, std::shared_ptr<PriceSettings> price_settings,
+                std::mutex &mutex)
+      : market_session(ioc, ctx), price_settings_(price_settings), price_mutex_(mutex) {}
 
   void on_handshake(boost::system::error_code ec) override {
     if (ec)
@@ -44,13 +46,19 @@ public:
       auto json_msg = nlohmann::json::parse(message);
       if (json_msg.contains("c")) {
         double current_price = std::stod(json_msg["c"].get<std::string>());
-        double new_calculated_price = current_price * 0.9;
+        double entry_price = current_price * (1 + price_settings_->entry_gap);
+        double tp_price = current_price * (1 + price_settings_->tp_price_percentage);
+        double sl_price = current_price * (1 + price_settings_->sl_price_percentage);
+
         {
           std::lock_guard<std::mutex> lock(price_mutex_);
-          *calculated_price_ = new_calculated_price;
+          price_settings_->current_price = current_price;
         }
 
-        market_logger->info("Updated Calculated Price (90%): {}", new_calculated_price);
+        market_logger->info("Price: {}", current_price);
+        market_logger->info("Entry Gap Price: {}", entry_price);
+        market_logger->info("Take Profit Price: {}", tp_price);
+        market_logger->info("Stop Loss Price: {}", sl_price);
       }
     } catch (const std::exception &e) {
       market_logger->error("Error parsing JSON or updating price: {}", e.what());
@@ -64,7 +72,7 @@ public:
   }
 
 private:
-  std::shared_ptr<double> calculated_price_;
+  std::shared_ptr<PriceSettings> price_settings_;
   std::mutex &price_mutex_;
 };
 

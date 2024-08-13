@@ -7,9 +7,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_FLAGS "-static-libstdc++ -static-libgcc -static")
 
-# Set the path to the locally built OpenSSL with static libraries
+# Set the path to the locally built OpenSSL
 set(OPENSSL_ROOT_DIR /home/f4r/openssl-3.3.1)
-set(OPENSSL_USE_STATIC_LIBS TRUE)
 
 # Include directories
 include_directories(modules/News/headers)

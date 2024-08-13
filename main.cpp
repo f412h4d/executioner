@@ -9,6 +9,7 @@
 #include "utils.h"
 
 // Websocket
+#include "modules/Websocket/headers/Market/price_settings.hpp"
 #include "modules/Websocket/headers/Market/price_session.hpp"
 #include "modules/Websocket/headers/User/event_order_update_session.hpp"
 #include "modules/Websocket/headers/root_certificates.hpp"
@@ -24,12 +25,12 @@ namespace pubsub = google::cloud::pubsub;
 
 void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_handler) {
   auto pubsub_logger = spdlog::get("pubsub_logger");
-  pubsub_logger->info("Received message: ", message.data());
+  pubsub_logger->info("Received message: {}", message.data());
   std::move(ack_handler).ack();
 }
 
-// shared values between websocket threads
-auto calculated_price = std::make_shared<double>(0.0);
+// Shared object and mutex between websocket threads
+auto price_settings = std::make_shared<PriceSettings>();
 std::mutex price_mutex;
 
 int main() {
@@ -38,7 +39,7 @@ int main() {
   auto market_logger = spdlog::get("market_logger");
   auto account_logger = spdlog::get("account_logger");
 
-  // setting up Binance API keys
+  // Setting up Binance API keys
   std::string exePath = Utils::getExecutablePath();
   std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
   std::string envFilePath = exeDir + "/../.env";
@@ -50,7 +51,7 @@ int main() {
 
   APIParams apiParams(apiKey, apiSecret, 5000, useTestnet);
 
-  // setting up Google cloud pubsub
+  // Setting up Google cloud pubsub
   const char *credentials_path = env["GOOGLE_CLOUD_CREDENTIALS_PATH"].c_str();
   setenv("GOOGLE_APPLICATION_CREDENTIALS", credentials_path, 1);
 
@@ -61,10 +62,10 @@ int main() {
   auto subscriber_connection = pubsub::MakeSubscriberConnection(subscription);
   auto subscriber = pubsub::Subscriber(subscriber_connection);
 
-  // setting up threads to run subscription async
+  // Setting up threads to run subscription async
   std::vector<std::thread> threads;
 
-  // setting up websocket context
+  // Setting up websocket context
   auto ioc = std::make_shared<boost::asio::io_context>();
   auto ctx = std::make_shared<ssl::context>(ssl::context::sslv23_client);
   load_root_certificates(*ctx);
@@ -74,7 +75,7 @@ int main() {
     subscriber.Subscribe(pubsub_callback).get();
   });
 
-  auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, calculated_price, price_mutex);
+  auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
   threads.emplace_back([&, ioc]() {
     market_logger->info("Listening for messages on Binance price ticket: ");
     price_session_instance->run("fstream.binance.com", "443");
@@ -82,7 +83,7 @@ int main() {
   });
 
   auto event_order_session =
-      std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
+      std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, price_settings, price_mutex);
   threads.emplace_back([&, ioc]() {
     account_logger->info("Listening for messages on Binance user stream: ");
     event_order_session->run("fstream.binance.com", "443");

@@ -13,7 +13,5 @@ else
     cmake --build build -- -j8
 fi
 
-make
-
 echo "Build process completed."
 

@@ -70,7 +70,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 target_link_libraries(executioner PRIVATE spdlog::spdlog)
 
-# Find and link OpenSSL as a static library
+# Find and link OpenSSL
 find_package(OpenSSL REQUIRED)
 target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 

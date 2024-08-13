@@ -77,8 +77,8 @@ void placeTpAndSlOrders(const APIParams &apiParams, const std::string &symbol, c
   int signal = side == "SELL" ? 1 : -1;
   auto price = Margin::getPrice(apiParams, "BTCUSDT");
   double calculated_price = Utils::roundToTickSize(price * (1 + (CALC_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-  double newTpPrice = Utils::roundToTickSize(calculated_price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
-  double newSlPrice = Utils::roundToTickSize(calculated_price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+  double newTpPrice = Utils::roundToTickSize(price * (1 + (TP_PRICE_PERCENTAGE * signal)), TICK_SIZE);
+  double newSlPrice = Utils::roundToTickSize(price * (1 + (SL_PRICE_PERCENTAGE * signal)), TICK_SIZE);
 
   TriggerOrderInput tpOrder(symbol, side, "TAKE_PROFIT_MARKET", "GTC", orig_qty, newTpPrice, newTpPrice, true);
   auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
