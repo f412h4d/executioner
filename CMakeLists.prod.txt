@@ -80,6 +80,10 @@ set(CMAKE_TOOLCHAIN_FILE "/home/amir_f/vcpkg/scripts/buildsystems/vcpkg.cmake")
 # Add vcpkg installation path to CMAKE_PREFIX_PATH
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/amir_f/vcpkg/installed/x64-linux/share")
 
+# Find zlib using vcpkg or system package
+find_package(ZLIB REQUIRED)
+target_link_libraries(executioner PRIVATE ZLIB::ZLIB)
+
 # Find the Google Cloud Pub/Sub package
 find_package(google_cloud_cpp_pubsub REQUIRED)
 
