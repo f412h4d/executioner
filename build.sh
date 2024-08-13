@@ -4,16 +4,17 @@
 if [ "$1" == "--prod" ]; then
     echo "Using production configuration..."
     cp CMakeLists.prod.txt CMakeLists.txt
+    cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/home/amir_f/vcpkg/scripts/buildsystems/vcpkg.cmake
 else
     echo "Using local configuration..."
     cp CMakeLists.local.txt CMakeLists.txt
+    cmake -B build -S .
 fi
-
-# Run cmake
-cmake -B build -S .
 
 # Clean up by removing the temporary CMakeLists.txt
 rm CMakeLists.txt
+
+make
 
 echo "Build process completed."
 
