@@ -5,7 +5,7 @@ if [ "$1" == "--prod" ]; then
     echo "Using production configuration..."
     cp CMakeLists.prod.txt CMakeLists.txt
     cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/home/amir_f/vcpkg/scripts/buildsystems/vcpkg.cmake
-    cmake --build build
+    cmake --build build -- -j4
 else
     echo "Using local configuration..."
     cp CMakeLists.local.txt CMakeLists.txt
