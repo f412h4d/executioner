@@ -2,6 +2,7 @@
 .idea
 
 # CMAKE
+CMakeLists.txt
 cmake-build-debug
 build
 release
