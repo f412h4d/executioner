@@ -23,7 +23,8 @@
 namespace pubsub = google::cloud::pubsub;
 
 void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_handler) {
-  Logger::pubsub_logger->info("Received message: ", message.data());
+  auto pubsub_logger = spdlog::get("pubsub_logger");
+  pubsub_logger->info("Received message: ", message.data());
   std::move(ack_handler).ack();
 }
 
@@ -32,6 +33,11 @@ auto calculated_price = std::make_shared<double>(0.0);
 std::mutex price_mutex;
 
 int main() {
+  Logger::setup_loggers();
+  auto pubsub_logger = spdlog::get("pubsub_logger");
+  auto market_logger = spdlog::get("market_logger");
+  auto account_logger = spdlog::get("account_logger");
+
   // setting up Binance API keys
   std::string exePath = Utils::getExecutablePath();
   std::string exeDir = exePath.substr(0, exePath.find_last_of('/'));
@@ -64,13 +70,13 @@ int main() {
   load_root_certificates(*ctx);
 
   threads.emplace_back([&]() {
-    Logger::pubsub_logger->info("Listening for messages on Google subs: ", subscription.FullName());
+    pubsub_logger->info("Listening for messages on Google subs: {}", subscription.FullName());
     subscriber.Subscribe(pubsub_callback).get();
   });
 
   auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, calculated_price, price_mutex);
   threads.emplace_back([&, ioc]() {
-    Logger::pubsub_logger->info("Listening for messages on Binance price ticket: ");
+    market_logger->info("Listening for messages on Binance price ticket: ");
     price_session_instance->run("fstream.binance.com", "443");
     ioc->run();
   });
@@ -78,7 +84,7 @@ int main() {
   auto event_order_session =
       std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, calculated_price, price_mutex);
   threads.emplace_back([&, ioc]() {
-    Logger::pubsub_logger->info("Listening for messages on Binance user stream: ");
+    account_logger->info("Listening for messages on Binance user stream: ");
     event_order_session->run("fstream.binance.com", "443");
     event_order_session->start_keep_alive();
     ioc->run();
