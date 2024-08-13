@@ -154,9 +154,7 @@ public:
   void start_keep_alive() {
     keep_alive_thread_ = std::thread([this]() {
       while (keep_alive_running_) {
-        std::cout << "\n\n----------- Refreshing the key! ------------\n\n";
-        // FIXME set time to a 30 min interval
-        std::this_thread::sleep_for(std::chrono::minutes(1));
+        std::this_thread::sleep_for(std::chrono::minutes(30));
         refresh_listen_key();
       }
     });
