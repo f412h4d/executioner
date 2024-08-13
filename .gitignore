@@ -10,6 +10,7 @@ release
 # env
 .env
 gcp-sa.json
+.sa.json
 
 # Prerequisites
 *.d

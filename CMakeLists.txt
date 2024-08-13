@@ -76,9 +76,19 @@ target_link_libraries(executioner PRIVATE spdlog::spdlog)
 
 # Find and link OpenSSL as a static library
 find_package(OpenSSL REQUIRED)
-
-# Link the libraries statically
 target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 # Link the static zlib library
 target_link_libraries(executioner PRIVATE /home/f4r/zlib-1.3.1/libz.a)
+
+# Include vcpkg toolchain
+set(CMAKE_TOOLCHAIN_FILE "/home/f4r/vcpkg/scripts/buildsystems/vcpkg.cmake")
+
+# Add vcpkg installation path to CMAKE_PREFIX_PATH
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/f4r/vcpkg/installed/x64-linux/share")
+
+# Find the Google Cloud Pub/Sub package
+find_package(google_cloud_cpp_pubsub REQUIRED)
+
+# Link the Google Cloud Pub/Sub library to the executioner target
+target_link_libraries(executioner PRIVATE google-cloud-cpp::pubsub)
