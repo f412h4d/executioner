@@ -68,7 +68,7 @@ int main() {
     subscriber.Subscribe(pubsub_callback).get();
   });
 
-  auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx);
+  auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, calculated_price, price_mutex);
   threads.emplace_back([&, ioc]() {
     Logger::pubsub_logger->info("Listening for messages on Binance price ticket: ");
     price_session_instance->run("fstream.binance.com", "443");
