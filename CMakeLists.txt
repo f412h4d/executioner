@@ -7,10 +7,6 @@ set(CMAKE_CXX_STANDARD 23)
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_FLAGS "-static-libstdc++ -static-libgcc -static")
 
-# Set the path to the locally built OpenSSL with static libraries
-set(OPENSSL_ROOT_DIR /home/f4r/openssl-3.3.1)
-set(OPENSSL_USE_STATIC_LIBS TRUE)
-
 # Include directories
 include_directories(modules/News/headers)
 include_directories(modules/Utils/headers)
@@ -59,9 +55,14 @@ target_link_libraries(executioner PRIVATE nlohmann_json::nlohmann_json)
 
 # Find and link OpenSSL as a static library
 find_package(OpenSSL REQUIRED)
-
-# Link the libraries statically
 target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
-# Link the static zlib library
-target_link_libraries(executioner PRIVATE /home/f4r/zlib-1.3.1/libz.a)
+# Include vcpkg toolchain
+set(CMAKE_TOOLCHAIN_FILE "/home/f4r/vcpkg/scripts/buildsystems/vcpkg.cmake")
+
+# Find and link zlib using vcpkg
+find_package(ZLIB REQUIRED)
+target_link_libraries(executioner PRIVATE ZLIB::ZLIB)
+
+# Add vcpkg installation path to CMAKE_PREFIX_PATH
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/f4r/vcpkg/installed/x64-linux/share")
