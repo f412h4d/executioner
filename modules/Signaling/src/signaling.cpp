@@ -11,9 +11,9 @@
 #include <sstream>
 
 #define EXEC_DELAY 1 // Entry Time offset
-#define CANCEL_DELAY 3001 // Open Order Elimination
+#define CANCEL_DELAY 3301 // Open Order Elimination
 #define MONITOR_DELAY 1
-#define CALC_PRICE_PERCENTAGE (-0.0008) // Entry Gap needs to be minus
+#define CALC_PRICE_PERCENTAGE (-0.002) // Entry Gap needs to be minus
 #define TP_PRICE_PERCENTAGE 0.014
 #define SL_PRICE_PERCENTAGE (-0.01)
 
