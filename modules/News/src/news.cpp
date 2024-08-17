@@ -46,8 +46,8 @@ std::string getCurrentDateTime() {
 }
 
 std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point> fetchNewsDateRange() {
-    std::string output = Utils::exec("../run_gsutil_news.sh");
-    std::istringstream iss(output);
+    // std::string output = Utils::exec("../run_gsutil_news.sh");
+    std::istringstream iss("");
     std::string line;
     std::vector<std::string> dateTimes;
 
