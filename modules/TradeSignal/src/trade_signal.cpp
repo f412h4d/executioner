@@ -1,4 +1,5 @@
 #include "trade_signal.h"
+#include "../../../modules/TradeSignal/models/trade_signal_model.h"
 #include "margin.h"
 #include "order.h"
 #include "side.h"
@@ -85,10 +86,9 @@ void placeTpAndSlOrders(const APIParams &apiParams, std::string side, double qua
   }
 }
 
-void cancelWithDelay(int signal, const APIParams &apiParams, SignalQueue &cancelQueue) {
+void cancelWithDelay(TradeSignal signal, const APIParams &apiParams, SignalQueue &cancelQueue) {
   auto cancel_queue_logger = spdlog::get("cancel_queue_logger");
-
-  cancel_queue_logger->info("Signal #{} Added to queue to be canceled", signal);
+  cancel_queue_logger->info("Signal: {} Added to queue to be canceled", signal.toJsonString());
 
   cancelQueue.addEvent(TIME::now() + std::chrono::seconds(CANCEL_DELAY), "Order Cancel",
                        [&apiParams, cancel_queue_logger]() {

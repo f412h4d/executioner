@@ -6,15 +6,18 @@
 
 #include "APIParams.h"
 #include "logger.h"
-#include "utils.h"
 #include "modules/TradeSignal/headers/trade_signal.h"
 #include "modules/TradeSignal/models/trade_signal_model.h"
+#include "utils.h"
+
+#include "modules/Margin/headers/account_status_model.h"
 
 // Websocket
 #include "modules/Websocket/headers/Market/price_session.hpp"
 #include "modules/Websocket/headers/Market/price_settings.hpp"
 #include "modules/Websocket/headers/User/balance_session.hpp"
 #include "modules/Websocket/headers/User/event_order_update_session.hpp"
+#include "modules/Websocket/headers/User/margin_session.hpp"
 #include "modules/Websocket/headers/root_certificates.hpp"
 // Websocket Boost libs
 #include <boost/asio/io_context.hpp>
@@ -27,14 +30,14 @@
 namespace pubsub = google::cloud::pubsub;
 
 void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_handler) {
-    auto pubsub_logger = spdlog::get("pubsub_logger");
-    auto signal_logger = spdlog::get("signal_logger");
-    pubsub_logger->info("Received message: {}", message.data());
+  auto pubsub_logger = spdlog::get("pubsub_logger");
+  auto signal_logger = spdlog::get("signal_logger");
+  pubsub_logger->info("Received message: {}", message.data());
 
-    TradeSignal signal = TradeSignal::fromJsonString(message.data());
-    signal_logger->info("Received signal: {}", signal.toJsonString());
+  TradeSignal signal = TradeSignal::fromJsonString(message.data());
+  signal_logger->info("Received signal: {}", signal.toJsonString());
 
-    std::move(ack_handler).ack();
+  std::move(ack_handler).ack();
 }
 
 // Shared object and mutex between websocket threads
@@ -43,6 +46,9 @@ std::mutex price_mutex;
 
 auto balance = std::make_shared<Balance>();
 std::mutex balance_mutex;
+
+auto account_status = std::make_shared<AccountStatus>();
+std::mutex account_status_mutex;
 
 int main() {
   Logger::setup_loggers();
@@ -90,6 +96,14 @@ int main() {
   threads.emplace_back([&, ioc]() {
     account_logger->info("Listening for balance updates");
     balance_session_instance->run("fstream.binance.com", "443");
+    ioc->run();
+  });
+
+  auto account_status_session_instance =
+      std::make_shared<margin_session>(*ioc, *ctx, apiParams, account_status, account_status_mutex);
+  threads.emplace_back([&, ioc]() {
+    account_logger->info("Listening for account status updates");
+    account_status_session_instance->run("fstream.binance.com", "443");
     ioc->run();
   });
 
