@@ -89,3 +89,6 @@ find_package(google_cloud_cpp_pubsub REQUIRED)
 
 # Link the Google Cloud Pub/Sub library to the executioner target
 target_link_libraries(executioner PRIVATE google-cloud-cpp::pubsub)
+
+# Add this line to link the uuid library
+target_link_libraries(executioner PRIVATE uuid)

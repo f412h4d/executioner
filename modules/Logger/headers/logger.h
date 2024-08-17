@@ -30,9 +30,14 @@ inline void setup_loggers() {
   };
 
   // Create all required loggers
+
+  create_logger("cancel_queue_logger", "logs/cancel_queue.log");
+  create_logger("cancel_logger", "logs/cancel.log");
+  create_logger("balance_logger", "logs/balance.log");
   create_logger("market_logger", "logs/market.log");
   create_logger("account_logger", "logs/acount.log");
   create_logger("margin_logger", "logs/margin.log");
+  create_logger("exec_logger", "logs/exec.log");
   create_logger("signal_logger", "logs/signal.log");
   create_logger("order_logger", "logs/order.log");
   create_logger("news_logger", "logs/news.log");

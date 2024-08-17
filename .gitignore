@@ -8,6 +8,9 @@ build
 release
 .cache
 
+# LOGS
+logs
+
 # env
 .env
 gcp-sa.json

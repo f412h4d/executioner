@@ -7,10 +7,13 @@
 #include "APIParams.h"
 #include "logger.h"
 #include "utils.h"
+#include "modules/TradeSignal/headers/trade_signal.h"
+#include "modules/TradeSignal/models/trade_signal_model.h"
 
 // Websocket
-#include "modules/Websocket/headers/Market/price_settings.hpp"
 #include "modules/Websocket/headers/Market/price_session.hpp"
+#include "modules/Websocket/headers/Market/price_settings.hpp"
+#include "modules/Websocket/headers/User/balance_session.hpp"
 #include "modules/Websocket/headers/User/event_order_update_session.hpp"
 #include "modules/Websocket/headers/root_certificates.hpp"
 // Websocket Boost libs
@@ -24,14 +27,22 @@
 namespace pubsub = google::cloud::pubsub;
 
 void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_handler) {
-  auto pubsub_logger = spdlog::get("pubsub_logger");
-  pubsub_logger->info("Received message: {}", message.data());
-  std::move(ack_handler).ack();
+    auto pubsub_logger = spdlog::get("pubsub_logger");
+    auto signal_logger = spdlog::get("signal_logger");
+    pubsub_logger->info("Received message: {}", message.data());
+
+    TradeSignal signal = TradeSignal::fromJsonString(message.data());
+    signal_logger->info("Received signal: {}", signal.toJsonString());
+
+    std::move(ack_handler).ack();
 }
 
 // Shared object and mutex between websocket threads
 auto price_settings = std::make_shared<PriceSettings>();
 std::mutex price_mutex;
+
+auto balance = std::make_shared<Balance>();
+std::mutex balance_mutex;
 
 int main() {
   Logger::setup_loggers();
@@ -73,6 +84,13 @@ int main() {
   threads.emplace_back([&]() {
     pubsub_logger->info("Listening for messages on Google subs: {}", subscription.FullName());
     subscriber.Subscribe(pubsub_callback).get();
+  });
+
+  auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams, balance, balance_mutex);
+  threads.emplace_back([&, ioc]() {
+    account_logger->info("Listening for balance updates");
+    balance_session_instance->run("fstream.binance.com", "443");
+    ioc->run();
   });
 
   auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
