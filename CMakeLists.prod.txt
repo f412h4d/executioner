@@ -2,21 +2,28 @@ cmake_minimum_required(VERSION 3.25)
 project(executioner)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Prefer static libraries
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_FLAGS "-static-libstdc++ -static-libgcc -static")
 
 # Include directories
-include_directories(modules/News/headers)
-include_directories(modules/Utils/headers)
-include_directories(modules/Margin/headers)
-include_directories(modules/Signaling/headers)
-include_directories(modules/Order/headers)
-include_directories(modules/Logger/headers)
-include_directories(modules/Order/models/APIParams)
-include_directories(modules/Order/models/OrderInput)
-include_directories(modules/Order/models/TriggerOrderInput)
+include_directories(
+    modules/News/headers
+    modules/Utils/headers
+    modules/Margin/headers
+    modules/Order/headers
+    modules/Logger/headers
+    modules/TradeSignal/headers
+    modules/TradeSignal/models
+    modules/Order/models
+    modules/Order/models/APIParams
+    modules/Order/models/OrderInput
+    modules/Order/models/TriggerOrderInput
+    modules/TimedEventQueue/headers
+)
 
 # Source files
 set(SOURCES
@@ -24,7 +31,7 @@ set(SOURCES
     modules/News/src/news.cpp
     modules/Utils/src/utils.cpp
     modules/Margin/src/margin.cpp
-    modules/Signaling/src/signaling.cpp
+    modules/TradeSignal/src/trade_signal.cpp
     modules/Order/models/APIParams/APIParams.cpp
     modules/Order/models/OrderInput/OrderInput.cpp
     modules/Order/models/TriggerOrderInput/TriggerOrderInput.cpp
@@ -34,9 +41,8 @@ set(SOURCES
 # Add executable
 add_executable(executioner ${SOURCES})
 
-include(FetchContent)
-
 # Fetch and build CPR as a static library
+include(FetchContent)
 FetchContent_Declare(
     cpr
     GIT_REPOSITORY https://github.com/libcpr/cpr.git
@@ -70,9 +76,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 target_link_libraries(executioner PRIVATE spdlog::spdlog)
 
-# Find and link OpenSSL
+# Find and link OpenSSL as a static library
 find_package(OpenSSL REQUIRED)
 target_link_libraries(executioner PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+
+# Link the static zlib library
+find_package(ZLIB REQUIRED)
+target_link_libraries(executioner PRIVATE ZLIB::ZLIB)
 
 # Include vcpkg toolchain
 set(CMAKE_TOOLCHAIN_FILE "/home/amir_f/vcpkg/scripts/buildsystems/vcpkg.cmake")
@@ -80,15 +90,10 @@ set(CMAKE_TOOLCHAIN_FILE "/home/amir_f/vcpkg/scripts/buildsystems/vcpkg.cmake")
 # Add vcpkg installation path to CMAKE_PREFIX_PATH
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/amir_f/vcpkg/installed/x64-linux/share")
 
-# Find zlib using vcpkg or system package
-find_package(ZLIB REQUIRED)
-target_link_libraries(executioner PRIVATE ZLIB::ZLIB)
-
 # Find the Google Cloud Pub/Sub package
 find_package(google_cloud_cpp_pubsub REQUIRED)
-
-# Link the Google Cloud Pub/Sub library to the executioner target
 target_link_libraries(executioner PRIVATE google-cloud-cpp::pubsub)
 
 # Add this line to link the uuid library
-target_link_libraries(executioner PRIVATE uuid)
+find_package(Threads REQUIRED)
+target_link_libraries(executioner PRIVATE uuid Threads::Threads)
