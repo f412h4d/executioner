@@ -50,6 +50,11 @@ std::mutex balance_mutex;
 auto account_status = std::make_shared<AccountStatus>();
 std::mutex account_status_mutex;
 
+void configure_ssl(boost::asio::ssl::context &ctx) {
+  ctx.set_options(boost::asio::ssl::context::tlsv12_client); // Set SSL/TLS version
+  ctx.set_verify_mode(boost::asio::ssl::verify_peer);        // Ensure peer certificate is verified
+}
+
 int main() {
   Logger::setup_loggers();
   auto pubsub_logger = spdlog::get("pubsub_logger");
@@ -86,6 +91,7 @@ int main() {
   auto ioc = std::make_shared<boost::asio::io_context>();
   auto ctx = std::make_shared<ssl::context>(ssl::context::sslv23_client);
   load_root_certificates(*ctx);
+  configure_ssl(*ctx);
 
   // threads.emplace_back([&]() {
   //   pubsub_logger->info("Listening for messages on Google subs: {}", subscription.FullName());
@@ -102,7 +108,7 @@ int main() {
   auto account_status_session_instance_test =
       std::make_shared<margin_session>(*ioc, *ctx, apiParams, account_status, account_status_mutex);
   account_logger->info("Listening for account status updates on testnet");
-  account_status_session_instance_test->run("testnet.binancefuture.com", "443");
+  account_status_session_instance_test->run("fstream.binance.com", "443");
   ioc->run();
   // threads.emplace_back([&, ioc]() {
   // });
