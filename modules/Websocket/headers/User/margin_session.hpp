@@ -29,10 +29,10 @@ public:
     }
 
     margin_logger->info("Margin Session: Handshake completed successfully.");
-    request_margin();
+    request_margin_status();
   }
 
-  void request_margin() {
+  void request_margin_status() {
     auto margin_logger = spdlog::get("margin_logger");
 
     std::string apiKey = api_params_.apiKey;
@@ -44,11 +44,13 @@ public:
     margin_logger->debug("Timestamp: {}", timestamp);
     margin_logger->debug("Recv Window: {}", recvWindow);
 
+    // Generate signature
     std::string data = "apiKey=" + apiKey + "&timestamp=" + std::to_string(timestamp) + "&recvWindow=" + recvWindow;
     std::string signature = Utils::HMAC_SHA256(api_params_.apiSecret, data);
 
     margin_logger->debug("Signature: {}", signature);
 
+    // Construct request payload
     nlohmann::json request;
     request["id"] = Utils::generate_uuid();
     request["method"] = "v2/account.status";
@@ -81,29 +83,7 @@ public:
       if (json_msg.contains("result")) {
         auto result = json_msg["result"];
         if (!result.empty()) {
-          {
-            std::lock_guard<std::mutex> lock(status_mutex_);
-            margin_logger->info("Updating account status.");
-            account_status_->totalInitialMargin = std::stod(result["totalInitialMargin"].get<std::string>());
-            account_status_->totalMaintMargin = std::stod(result["totalMaintMargin"].get<std::string>());
-            account_status_->totalWalletBalance = std::stod(result["totalWalletBalance"].get<std::string>());
-            account_status_->totalUnrealizedProfit = std::stod(result["totalUnrealizedProfit"].get<std::string>());
-            account_status_->totalMarginBalance = std::stod(result["totalMarginBalance"].get<std::string>());
-            account_status_->totalPositionInitialMargin =
-                std::stod(result["totalPositionInitialMargin"].get<std::string>());
-            account_status_->totalOpenOrderInitialMargin =
-                std::stod(result["totalOpenOrderInitialMargin"].get<std::string>());
-            account_status_->totalCrossWalletBalance = std::stod(result["totalCrossWalletBalance"].get<std::string>());
-            account_status_->totalCrossUnPnl = std::stod(result["totalCrossUnPnl"].get<std::string>());
-            account_status_->availableBalance = std::stod(result["availableBalance"].get<std::string>());
-            account_status_->maxWithdrawAmount = std::stod(result["maxWithdrawAmount"].get<std::string>());
-          }
-
-          margin_logger->info("Total Initial Margin: {}", account_status_->totalInitialMargin);
-          margin_logger->info("Total Maintenance Margin: {}", account_status_->totalMaintMargin);
-          margin_logger->info("Total Wallet Balance: {}", account_status_->totalWalletBalance);
-          margin_logger->info("Total Unrealized Profit: {}", account_status_->totalUnrealizedProfit);
-          margin_logger->info("Total Margin Balance: {}", account_status_->totalMarginBalance);
+          update_account_status(result);
         }
       } else {
         margin_logger->warn("Result not found in the received message.");
@@ -120,6 +100,27 @@ public:
   }
 
 private:
+  void update_account_status(const nlohmann::json &result) {
+    auto margin_logger = spdlog::get("margin_logger");
+
+    std::lock_guard<std::mutex> lock(status_mutex_);
+    margin_logger->info("Updating account status.");
+
+    account_status_->totalInitialMargin = std::stod(result["totalInitialMargin"].get<std::string>());
+    account_status_->totalMaintMargin = std::stod(result["totalMaintMargin"].get<std::string>());
+    account_status_->totalWalletBalance = std::stod(result["totalWalletBalance"].get<std::string>());
+    account_status_->totalUnrealizedProfit = std::stod(result["totalUnrealizedProfit"].get<std::string>());
+    account_status_->totalMarginBalance = std::stod(result["totalMarginBalance"].get<std::string>());
+    account_status_->totalPositionInitialMargin = std::stod(result["totalPositionInitialMargin"].get<std::string>());
+    account_status_->totalOpenOrderInitialMargin = std::stod(result["totalOpenOrderInitialMargin"].get<std::string>());
+    account_status_->totalCrossWalletBalance = std::stod(result["totalCrossWalletBalance"].get<std::string>());
+    account_status_->totalCrossUnPnl = std::stod(result["totalCrossUnPnl"].get<std::string>());
+    account_status_->availableBalance = std::stod(result["availableBalance"].get<std::string>());
+    account_status_->maxWithdrawAmount = std::stod(result["maxWithdrawAmount"].get<std::string>());
+
+    margin_logger->info("Account status updated successfully.");
+  }
+
   std::shared_ptr<AccountStatus> account_status_;
   std::mutex &status_mutex_;
 };
