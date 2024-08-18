@@ -15,6 +15,7 @@
 // Websocket
 #include "modules/Websocket/headers/Market/price_session.hpp"
 #include "modules/Websocket/headers/Market/price_settings.hpp"
+#include "modules/Websocket/headers/User/account_update_session.hpp"
 #include "modules/Websocket/headers/User/balance_session.hpp"
 #include "modules/Websocket/headers/User/event_order_update_session.hpp"
 #include "modules/Websocket/headers/User/margin_session.hpp"
@@ -116,7 +117,7 @@ int main() {
   // });
 
 
-  auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams);
+  auto balance_session_instance = std::make_shared<account_update_session>(*ioc, *ctx, apiParams);
   threads.emplace_back([&, ioc]() {
     account_logger->info("Listening for balance updates");
     balance_session_instance->run("fstream.binance.com", "443");
