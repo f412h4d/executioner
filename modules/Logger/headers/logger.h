@@ -30,7 +30,6 @@ inline void setup_loggers() {
   };
 
   // Create all required loggers
-
   create_logger("cancel_queue_logger", "logs/cancel_queue.log");
   create_logger("cancel_logger", "logs/cancel.log");
   create_logger("balance_logger", "logs/balance.log");
@@ -45,7 +44,7 @@ inline void setup_loggers() {
   create_logger("pubsub_logger", "logs/pubsub.log");
 
   // Set the logging pattern for all loggers
-  spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] [thread %t] %v");
+  spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] [thread %t] [%s:%#] [%!] %v");
 }
 
 } // namespace Logger
