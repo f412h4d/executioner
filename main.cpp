@@ -44,8 +44,8 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
 auto price_settings = std::make_shared<PriceSettings>();
 std::mutex price_mutex;
 
-auto balance = std::make_shared<Balance>();
-std::mutex balance_mutex;
+// auto balance = std::make_shared<Balance>();
+// std::mutex balance_mutex;
 
 auto account_status = std::make_shared<AccountStatus>();
 std::mutex account_status_mutex;
@@ -85,6 +85,7 @@ int main() {
   // Setting up websocket context
   auto ioc = std::make_shared<boost::asio::io_context>();
   auto ctx = std::make_shared<ssl::context>(ssl::context::sslv23_client);
+  ctx->set_verify_mode(ssl::verify_peer);
   load_root_certificates(*ctx);
 
   // threads.emplace_back([&]() {
@@ -92,12 +93,12 @@ int main() {
   //   subscriber.Subscribe(pubsub_callback).get();
   // });
   //
-  auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams, balance, balance_mutex);
-  threads.emplace_back([&, ioc]() {
-    account_logger->info("Listening for balance updates");
-    balance_session_instance->run("fstream.binance.com", "443");
-    ioc->run();
-  });
+  // auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams, balance, balance_mutex);
+  // threads.emplace_back([&, ioc]() {
+  //   account_logger->info("Listening for balance updates");
+  //   balance_session_instance->run("fstream.binance.com", "443");
+  //   ioc->run();
+  // });
   //
   // auto account_status_session_instance = std::make_shared<margin_session>(*ioc, *ctx, apiParams);
   // threads.emplace_back([&, ioc]() {
@@ -106,13 +107,22 @@ int main() {
   //   ioc->run();
   // });
   //
+
   // auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
   // threads.emplace_back([&, ioc]() {
   //   market_logger->info("Listening for messages on Binance price ticket: ");
   //   price_session_instance->run("fstream.binance.com", "443");
   //   ioc->run();
   // });
-  //
+
+
+  auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams);
+  threads.emplace_back([&, ioc]() {
+    account_logger->info("Listening for balance updates");
+    balance_session_instance->run("fstream.binance.com", "443");
+    ioc->run();
+  });
+
   // auto event_order_session =
   //     std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, price_settings, price_mutex);
   // threads.emplace_back([&, ioc]() {
