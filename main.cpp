@@ -26,7 +26,7 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
-#include <boost/asio/ssl/stream.hpp> // For boost::asio::ssl::stream
+#include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -53,7 +53,6 @@ void websocket_request(const APIParams &apiParams) {
 
     // These objects perform our I/O
     tcp::resolver resolver{ioc};
-
     websocket::stream<ssl_stream> ws{ioc, ctx};
 
     // Resolve the host
@@ -74,16 +73,23 @@ void websocket_request(const APIParams &apiParams) {
     std::string host = "ws-fapi.binance.com";
     ws.handshake(host, "/ws-fapi/v1");
 
-    // Prepare the request (example: session.logon)
+    // Prepare the request
+    long timestamp = time(NULL) * 1000; // UNIX timestamp in milliseconds
+
+    // Prepare the data string used for HMAC
+    std::string data = "apiKey=" + apiParams.apiKey + "&timestamp=" + std::to_string(timestamp);
+
+    // Generate the HMAC SHA256 signature
+    std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, data);
+
+    // Create the JSON request
     std::string message = R"({
             "id": "unique_request_id",
             "method": "session.logon",
             "params": {
-                "apiKey": ")" +
-                          apiParams.apiKey + R"(",
-                "timestamp": )" +
-                          std::to_string(time(NULL) * 1000) + R"(,
-                "signature": "signature_placeholder"
+                "apiKey": ")" + apiParams.apiKey + R"(",
+                "timestamp": )" + std::to_string(timestamp) + R"(,
+                "signature": ")" + signature + R"("
             }
         })";
 
