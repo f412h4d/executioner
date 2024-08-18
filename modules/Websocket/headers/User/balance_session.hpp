@@ -41,7 +41,7 @@ public:
     long timestamp = Utils::getCurrentTimestamp();
     std::string recvWindow = "5000";
 
-    std::string data = "apiKey=" + apiKey + "&timestamp=" + std::to_string(timestamp) + "&recvWindow=" + recvWindow;
+    std::string data = "apiKey=" + apiKey + "&timestamp=" + std::to_string(timestamp);
     std::string signature = Utils::HMAC_SHA256(api_params_.apiSecret, data);
 
     nlohmann::json request;
@@ -49,7 +49,6 @@ public:
     request["method"] = "v2/account.balance";
     request["params"]["apiKey"] = apiKey;
     request["params"]["timestamp"] = timestamp;
-    request["params"]["recvWindow"] = recvWindow;
     request["params"]["signature"] = signature;
 
     ws_.async_write(boost::asio::buffer(request.dump()), [capture0 = shared_from_this()](auto &&PH1, auto &&PH2) {
