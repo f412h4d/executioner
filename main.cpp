@@ -79,19 +79,22 @@ void websocket_request(const APIParams &apiParams) {
     // Prepare the data string used for HMAC
     std::string data = "apiKey=" + apiParams.apiKey + "&timestamp=" + std::to_string(timestamp);
 
-    // Generate the HMAC SHA256 signature
-    std::string signature = Utils::HMAC_SHA256(apiParams.apiSecret, data);
+    // Generate the signature using Ed25519
+    std::string signature = Utils::generate_ed25519_signature(data, apiParams.apiSecret);
 
     // Create the JSON request
     std::string message = R"({
-            "id": "unique_request_id",
-            "method": "session.logon",
-            "params": {
-                "apiKey": ")" + apiParams.apiKey + R"(",
-                "timestamp": )" + std::to_string(timestamp) + R"(,
-                "signature": ")" + signature + R"("
-            }
-        })";
+        "id": "unique_request_id",
+        "method": "session.logon",
+        "params": {
+            "apiKey": ")" +
+                          apiParams.apiKey + R"(",
+            "timestamp": )" +
+                          std::to_string(timestamp) + R"(,
+            "signature": ")" +
+                          signature + R"("
+        }
+    })";
 
     // Send the message
     ws.write(net::buffer(std::string(message)));

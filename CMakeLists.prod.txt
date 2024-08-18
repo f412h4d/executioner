@@ -97,3 +97,14 @@ target_link_libraries(executioner PRIVATE google-cloud-cpp::pubsub)
 # Add this line to link the uuid library
 find_package(Threads REQUIRED)
 target_link_libraries(executioner PRIVATE uuid Threads::Threads)
+
+# Add Boost components
+find_package(Boost REQUIRED COMPONENTS system thread chrono date_time regex context)
+target_link_libraries(executioner PRIVATE Boost::system Boost::thread Boost::chrono Boost::date_time Boost::regex Boost::context)
+
+# Find and link Boost.Asio and Boost.Beast for WebSocket and SSL
+find_package(Boost REQUIRED COMPONENTS asio beast)
+target_link_libraries(executioner PRIVATE Boost::asio Boost::beast)
+
+find_package(unofficial-sodium CONFIG REQUIRED)
+target_link_libraries(executioner PRIVATE unofficial-sodium::sodium)

@@ -17,6 +17,8 @@ std::string urlEncode(const std::string &value);
 
 std::string HMAC_SHA256(const std::string &key, const std::string &data);
 
+std::string generate_ed25519_signature(const std::string& message, const std::string& private_key_hex);
+
 double roundToTickSize(double price, double tick_size);
 
 std::string generate_uuid();

@@ -12,6 +12,7 @@
 #include <uuid/uuid.h>
 #include <cstdio>
 #include <string>
+#include <sodium.h>
 
 namespace Utils {
 
@@ -86,6 +87,23 @@ std::string HMAC_SHA256(const std::string &key, const std::string &data) {
   }
 
   return {mdString};
+}
+
+std::string generate_ed25519_signature(const std::string& message, const std::string& private_key_hex) {
+    unsigned char private_key[crypto_sign_SECRETKEYBYTES];
+    unsigned char signature[crypto_sign_BYTES];
+
+    // Convert the private key from hex string to bytes
+    sodium_hex2bin(private_key, sizeof(private_key), private_key_hex.c_str(), private_key_hex.size(), nullptr, nullptr, nullptr);
+
+    // Generate the signature
+    crypto_sign_detached(signature, nullptr, reinterpret_cast<const unsigned char*>(message.c_str()), message.size(), private_key);
+
+    // Convert the signature to a hex string
+    char signature_hex[crypto_sign_BYTES * 2 + 1];
+    sodium_bin2hex(signature_hex, sizeof(signature_hex), signature, sizeof(signature));
+
+    return std::string(signature_hex);
 }
 
 double roundToTickSize(double price, double tick_size) { return std::round(price / tick_size) * tick_size; }
