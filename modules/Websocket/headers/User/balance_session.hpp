@@ -4,9 +4,25 @@
 #include "spdlog/spdlog.h"
 #include "user_session.hpp"
 #include "utils.h"
+#include <boost/asio/connect.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl/context.hpp>
+#include <boost/asio/ssl/stream.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/beast/websocket/ssl.hpp>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
+
+namespace beast = boost::beast;         // from <boost/beast.hpp>
+namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
+namespace net = boost::asio;            // from <boost/asio.hpp>
+namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
+using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+using ssl_stream = boost::asio::ssl::stream<tcp::socket>;
 
 class Balance {
 public:
@@ -21,9 +37,33 @@ class balance_session : public user_session {
 public:
   balance_session(boost::asio::io_context &ioc, ssl::context &ctx, const APIParams &api_params,
                   std::shared_ptr<Balance> balance, std::mutex &mutex)
-      : user_session(ioc, ctx, api_params), balance_(balance), balance_mutex_(mutex) {}
+      : user_session(ioc, ctx, api_params), ws_(net::make_strand(ioc), ctx), balance_(balance), balance_mutex_(mutex) {}
 
-  void run(const std::string &host, const std::string &port) override { user_session::run(host, port); }
+  void run(const std::string &host, const std::string &port) override {
+    tcp::resolver resolver(ws_.get_executor().context());
+    auto const results = resolver.resolve(host, port);
+
+    net::async_connect(ws_.next_layer().next_layer(), results.begin(), results.end(),
+                       beast::bind_front_handler(&balance_session::on_connect, shared_from_this()));
+  }
+
+  void on_connect(boost::system::error_code ec, tcp::resolver::results_type::endpoint_type) {
+    if (ec)
+      return fail(ec, "connect");
+
+    // Perform the SSL handshake
+    ws_.next_layer().async_handshake(ssl::stream_base::client,
+                                     beast::bind_front_handler(&balance_session::on_ssl_handshake, shared_from_this()));
+  }
+
+  void on_ssl_handshake(boost::system::error_code ec) {
+    if (ec)
+      return fail(ec, "ssl_handshake");
+
+    // Perform the WebSocket handshake
+    ws_.async_handshake(api_params_.host, "/",
+                        beast::bind_front_handler(&balance_session::on_handshake, shared_from_this()));
+  }
 
   void on_handshake(boost::system::error_code ec) override {
     auto balance_logger = spdlog::get("balance_logger");
@@ -39,9 +79,8 @@ public:
 
     std::string apiKey = api_params_.apiKey;
     long timestamp = Utils::getCurrentTimestamp();
-    std::string recvWindow = "5000";
 
-    std::string data = "apiKey=" + apiKey + "&timestamp=" + std::to_string(timestamp) + "&recvWindow=" + recvWindow;
+    std::string data = "apiKey=" + apiKey + "&timestamp=" + std::to_string(timestamp);
     std::string signature = Utils::HMAC_SHA256(api_params_.apiSecret, data);
 
     nlohmann::json request;
@@ -49,12 +88,19 @@ public:
     request["method"] = "v2/account.balance";
     request["params"]["apiKey"] = apiKey;
     request["params"]["timestamp"] = timestamp;
-    request["params"]["recvWindow"] = recvWindow;
     request["params"]["signature"] = signature;
 
-    ws_.async_write(boost::asio::buffer(request.dump()), [capture0 = shared_from_this()](auto &&PH1, auto &&PH2) {
-      capture0->on_write(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
-    });
+    ws_.async_write(net::buffer(request.dump()),
+                    beast::bind_front_handler(&balance_session::on_write, shared_from_this()));
+  }
+
+  void on_write(boost::system::error_code ec, std::size_t bytes_transferred) override {
+    boost::ignore_unused(bytes_transferred);
+    if (ec)
+      return fail(ec, "write");
+
+    // Read the response
+    ws_.async_read(buffer_, beast::bind_front_handler(&balance_session::on_read, shared_from_this()));
   }
 
   void on_read(boost::system::error_code ec, std::size_t bytes_transferred) override {
@@ -64,7 +110,7 @@ public:
     if (ec)
       return fail(ec, "read");
 
-    std::string message = boost::beast::buffers_to_string(buffer_.data());
+    std::string message = beast::buffers_to_string(buffer_.data());
     balance_logger->info("Balance Update Received: {}", message);
 
     try {
@@ -101,12 +147,12 @@ public:
 
     buffer_.consume(buffer_.size());
 
-    ws_.async_read(buffer_, [capture0 = shared_from_this()](auto &&PH1, auto &&PH2) {
-      capture0->on_read(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
-    });
+    ws_.async_read(buffer_, beast::bind_front_handler(&balance_session::on_read, shared_from_this()));
   }
 
 private:
+  websocket::stream<ssl_stream> ws_;
+  beast::flat_buffer buffer_;
   std::shared_ptr<Balance> balance_;
   std::mutex &balance_mutex_;
 };

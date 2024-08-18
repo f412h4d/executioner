@@ -19,11 +19,16 @@
 #include "modules/Websocket/headers/User/event_order_update_session.hpp"
 #include "modules/Websocket/headers/User/margin_session.hpp"
 #include "modules/Websocket/headers/root_certificates.hpp"
-// Websocket Boost libs
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ssl/context.hpp>
 
+// Google cloud pubsub
+#include "google/cloud/pubsub/subscriber.h"
+#include "google/cloud/pubsub/subscriber_connection.h"
+
+namespace pubsub = google::cloud::pubsub;
+
+// Websocket Boost libs
 #include <boost/asio/connect.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/ssl/stream.hpp>
@@ -32,90 +37,9 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 
-// Google cloud pubsub
-#include "google/cloud/pubsub/subscriber.h"
-#include "google/cloud/pubsub/subscriber_connection.h"
-
-namespace pubsub = google::cloud::pubsub;
-
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
-namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
-namespace net = boost::asio;            // from <boost/asio.hpp>
-namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+namespace ssl = boost::asio::ssl;
+using tcp = boost::asio::ip::tcp;
 using ssl_stream = boost::asio::ssl::stream<tcp::socket>;
-
-void websocket_request(const APIParams &apiParams) {
-  try {
-    net::io_context ioc;
-    ssl::context ctx{ssl::context::tlsv12_client};
-
-    // These objects perform our I/O
-    tcp::resolver resolver{ioc};
-    websocket::stream<ssl_stream> ws{ioc, ctx};
-
-    // Resolve the host
-    auto const results = resolver.resolve("ws-fapi.binance.com", "443");
-
-    // Make the connection on the IP address we get from a lookup
-    net::connect(ws.next_layer().next_layer(), results.begin(), results.end());
-
-    // Perform the SSL handshake
-    ws.next_layer().handshake(ssl::stream_base::client);
-
-    // Set a decorator to change the User-Agent of the handshake
-    ws.set_option(websocket::stream_base::decorator([](websocket::request_type &req) {
-      req.set(http::field::user_agent, std::string(BOOST_BEAST_VERSION_STRING) + " websocket-client-cxx");
-    }));
-
-    // Perform the WebSocket handshake
-    std::string host = "ws-fapi.binance.com";
-    ws.handshake(host, "/ws-fapi/v1");
-
-    // Prepare the request
-    long timestamp = time(NULL) * 1000; // UNIX timestamp in milliseconds
-
-    // Prepare the data string used for HMAC
-    std::string data = "apiKey=" + apiParams.apiKey + "&timestamp=" + std::to_string(timestamp);
-
-    // Generate the signature using Ed25519
-    std::string signature = Utils::generate_ed25519_signature(data, apiParams.apiSecret);
-
-    // Create the JSON request
-    std::string message = R"({
-        "id": "unique_request_id",
-        "method": "session.logon",
-        "params": {
-            "apiKey": ")" +
-                          apiParams.apiKey + R"(",
-            "timestamp": )" +
-                          std::to_string(timestamp) + R"(,
-            "signature": ")" +
-                          signature + R"("
-        }
-    })";
-
-    // Send the message
-    ws.write(net::buffer(std::string(message)));
-
-    // This buffer will hold the incoming message
-    beast::flat_buffer buffer;
-
-    // Read a message into our buffer
-    ws.read(buffer);
-
-    // Close the WebSocket connection
-    ws.close(websocket::close_code::normal);
-
-    // If we get here then the connection is closed gracefully
-
-    // The message is received, convert it to a string and print
-    std::cout << beast::make_printable(buffer.data()) << std::endl;
-  } catch (std::exception const &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-  }
-}
 
 void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_handler) {
   auto pubsub_logger = spdlog::get("pubsub_logger");
@@ -154,9 +78,7 @@ int main() {
   std::string apiKey = useTestnet ? env["TESTNET_API_KEY"] : env["API_KEY"];
   std::string apiSecret = useTestnet ? env["TESTNET_API_SECRET"] : env["API_SECRET"];
 
-  APIParams apiParams(apiKey, apiSecret, 5000, useTestnet);
-
-  websocket_request(apiParams);
+  APIParams apiParams(apiKey, apiSecret, 5000, useTestnet, "fstream.binance.com");
 
   // Setting up Google cloud pubsub
   const char *credentials_path = env["GOOGLE_CLOUD_CREDENTIALS_PATH"].c_str();
@@ -182,12 +104,12 @@ int main() {
   //   subscriber.Subscribe(pubsub_callback).get();
   // });
   //
-  // auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams, balance, balance_mutex);
-  // threads.emplace_back([&, ioc]() {
-  //   account_logger->info("Listening for balance updates");
-  //   balance_session_instance->run("fstream.binance.com", "443");
-  //   ioc->run();
-  // });
+  auto balance_session_instance = std::make_shared<balance_session>(*ioc, *ctx, apiParams, balance, balance_mutex);
+  threads.emplace_back([&, ioc]() {
+    account_logger->info("Listening for balance updates");
+    balance_session_instance->run("fstream.binance.com", "443");
+    ioc->run();
+  });
   //
   // auto account_status_session_instance = std::make_shared<margin_session>(*ioc, *ctx, apiParams);
   // threads.emplace_back([&, ioc]() {
