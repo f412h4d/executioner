@@ -119,13 +119,13 @@ void cancelWithDelay(TradeSignal signal, const APIParams &apiParams, SignalQueue
                        });
 }
 
-void process(int signal, const APIParams &apiParams, double entryPrice) {
+void process(int signal, const APIParams &apiParams, double quantity, double entryPrice) {
   bool validConditions = prepareForOrder(apiParams);
   if (!validConditions) {
     return;
   }
 
-  OrderInput order(SYMBOL, Side::fromSignal(signal), "LIMIT", "GTC", 0.005, entryPrice);
+  OrderInput order(SYMBOL, Side::fromSignal(signal), "LIMIT", "GTC", quantity, entryPrice);
   auto order_response = OrderService::createOrder(apiParams, order);
 
   if (order_response.contains("orderId")) {

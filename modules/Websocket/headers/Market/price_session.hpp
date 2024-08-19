@@ -53,6 +53,9 @@ public:
         {
           std::lock_guard<std::mutex> lock(price_mutex_);
           price_settings_->current_price = current_price;
+          price_settings_->calculated_sl = sl_price;
+          price_settings_->calculated_tp = tp_price;
+          price_settings_->calculated_price = entry_price;
         }
 
         market_logger->info("Price: {}", current_price);

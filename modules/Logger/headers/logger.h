@@ -41,7 +41,7 @@ inline void setup_loggers() {
   create_logger("signal_logger", "logs/signal.log");
   create_logger("order_logger", "logs/order.log");
   create_logger("news_logger", "logs/news.log");
-  create_logger("active_logger", "logs/active.log");
+  create_logger("is_active_logger", "logs/is_active.log");
   create_logger("pubsub_logger", "logs/pubsub.log");
 
   // Set the logging pattern for all loggers
