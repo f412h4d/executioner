@@ -76,7 +76,7 @@ fetchNewsDateRange() {
   }
 
   if (dateTimes.empty()) {
-    std::cout << "No dates found for today." << std::endl;
+    // std::cout << "No dates found for today." << std::endl;
     // Return a default range or handle as per your application's logic
     std::chrono::system_clock::time_point far_past =
         std::chrono::system_clock::now() -
