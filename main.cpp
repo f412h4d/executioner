@@ -30,9 +30,29 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
   auto signal_logger = spdlog::get("signal_logger");
   pubsub_logger->info("Received message: {}", message.data());
 
-  TradeSignal signal = TradeSignal::fromJsonString(message.data());
-  signal_logger->info("Received signal: {}", signal.toJsonString());
+  try {
+    // Try to parse the message and create a TradeSignal object
+    TradeSignal signal = TradeSignal::fromJsonString(message.data());
+    signal_logger->info("Received signal: {}", signal.toJsonString());
+  } catch (const nlohmann::json::exception &e) {
+    // Handle JSON parsing errors or other JSON-related issues
+    pubsub_logger->error("JSON parsing error: {}", e.what());
+    pubsub_logger->error("Message data: {}", message.data());
 
+    // Optionally, decide how to handle this case (e.g., skip the message)
+    std::move(ack_handler).ack(); // Acknowledge the message to prevent reprocessing
+    return;
+  } catch (const std::exception &e) {
+    // Handle other exceptions that may occur
+    pubsub_logger->error("Error processing message: {}", e.what());
+    pubsub_logger->error("Message data: {}", message.data());
+
+    // Optionally, decide how to handle this case (e.g., skip the message)
+    std::move(ack_handler).ack(); // Acknowledge the message to prevent reprocessing
+    return;
+  }
+
+  // If everything goes well, acknowledge the message
   std::move(ack_handler).ack();
 }
 
@@ -103,21 +123,21 @@ int main() {
   //   ioc->run();
   // });
 
-  auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
-  threads.emplace_back([&, ioc]() {
-    market_logger->info("Listening for messages on Binance price ticket: ");
-    price_session_instance->run("fstream.binance.com", "443");
-    ioc->run();
-  });
-
-  auto event_order_session =
-      std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, price_settings, price_mutex);
-  threads.emplace_back([&, ioc]() {
-    account_logger->info("Listening for messages on Binance user stream: ");
-    event_order_session->run("fstream.binance.com", "443");
-    event_order_session->start_keep_alive();
-    ioc->run();
-  });
+  // auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
+  // threads.emplace_back([&, ioc]() {
+  //   market_logger->info("Listening for messages on Binance price ticket: ");
+  //   price_session_instance->run("fstream.binance.com", "443");
+  //   ioc->run();
+  // });
+  //
+  // auto event_order_session =
+  //     std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, price_settings, price_mutex);
+  // threads.emplace_back([&, ioc]() {
+  //   account_logger->info("Listening for messages on Binance user stream: ");
+  //   event_order_session->run("fstream.binance.com", "443");
+  //   event_order_session->start_keep_alive();
+  //   ioc->run();
+  // });
 
   for (auto &thread : threads) {
     if (thread.joinable()) {
