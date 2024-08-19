@@ -58,10 +58,10 @@ public:
           price_settings_->calculated_price = entry_price;
         }
 
-        market_logger->info("Price: {}", current_price);
-        market_logger->info("Entry Gap Price: {}", entry_price);
-        market_logger->info("Take Profit Price: {}", tp_price);
-        market_logger->info("Stop Loss Price: {}", sl_price);
+        market_logger->debug("Price: {}", current_price);
+        market_logger->debug("Entry Gap Price: {}", entry_price);
+        market_logger->debug("Take Profit Price: {}", tp_price);
+        market_logger->debug("Stop Loss Price: {}", sl_price);
       }
     } catch (const std::exception &e) {
       market_logger->error("Error parsing JSON or updating price: {}", e.what());
