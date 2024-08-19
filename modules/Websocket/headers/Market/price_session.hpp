@@ -25,7 +25,7 @@ public:
     nlohmann::json j;
     j["id"] = "custom-id";
     j["method"] = "SUBSCRIBE";
-    j["params"] = {"ethusdt@ticker"};
+    j["params"] = {"btcusdt@ticker"};
 
     ws_.async_write(boost::asio::buffer(j.dump()), [capture0 = shared_from_this()](auto &&PH1, auto &&PH2) {
       capture0->on_write(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
