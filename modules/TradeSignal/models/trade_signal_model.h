@@ -1,8 +1,11 @@
 #ifndef TRADE_SIGNAL_H
 #define TRADE_SIGNAL_H
 
+#include "logger.h"
 #include <chrono>
+#include <csignal>
 #include <iomanip>
+#include <iostream>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <sstream>
@@ -25,15 +28,12 @@ struct TradeSignal {
     return json_message.dump();
   }
 
-  static TradeSignal fromJsonString(const std::string &json_string) {
-    TradeSignal signal;
+  void fromJsonString(const std::string &json_string) {
     nlohmann::json json_message = nlohmann::json::parse(json_string);
 
-    signal.lag = json_message["lag"].get<int>();
-    signal.value = json_message["value"].get<int>();
-    signal.datetime = json_message["datetime"].get<std::string>();
-
-    return signal;
+    lag = json_message["lag"].get<int>();
+    value = json_message["value"].get<int>();
+    datetime = json_message["datetime"].get<std::string>();
   }
 };
 
