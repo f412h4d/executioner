@@ -172,21 +172,21 @@ int main() {
   //   ioc->run();
   // });
 
-  // auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
-  // threads.emplace_back([&, ioc]() {
-  //   market_logger->info("Listening for messages on Binance price ticket: ");
-  //   price_session_instance->run("fstream.binance.com", "443");
-  //   ioc->run();
-  // });
-  //
-  // auto event_order_session =
-  //     std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, price_settings, price_mutex);
-  // threads.emplace_back([&, ioc]() {
-  //   account_logger->info("Listening for messages on Binance user stream: ");
-  //   event_order_session->run("fstream.binance.com", "443");
-  //   event_order_session->start_keep_alive();
-  //   ioc->run();
-  // });
+  auto price_session_instance = std::make_shared<price_session>(*ioc, *ctx, price_settings, price_mutex);
+  threads.emplace_back([&, ioc]() {
+    market_logger->info("Listening for messages on Binance price ticket: ");
+    price_session_instance->run("fstream.binance.com", "443");
+    ioc->run();
+  });
+
+  auto event_order_session =
+      std::make_shared<event_order_update_session>(*ioc, *ctx, apiParams, price_settings, price_mutex);
+  threads.emplace_back([&, ioc]() {
+    account_logger->info("Listening for messages on Binance user stream: ");
+    event_order_session->run("fstream.binance.com", "443");
+    event_order_session->start_keep_alive();
+    ioc->run();
+  });
 
   for (auto &thread : threads) {
     if (thread.joinable()) {
