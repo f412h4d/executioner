@@ -73,9 +73,10 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
 
       signal_logger->info("Received signal: {}", signal_settings->signal.toJsonString());
 
-      auto balance_response = Margin::getBalance(apiParams, "BTCUSDT");
-      double balance = balance_response["availableBalance"].get<double>();
+      auto balance = Margin::getBalance(apiParams, "USDT");
+      signal_logger->warn("Balance: {}", balance);
       double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
+      signal_logger->warn("Quantity: {}", quantity);
 
       SignalService::process(signal_settings->signal.value, apiParams, quantity, price_settings->calculated_price);
     } else if (message_type == "news") {
@@ -128,6 +129,7 @@ int main() {
   std::string apiSecret = useTestnet ? env["TESTNET_API_SECRET"] : env["API_SECRET"];
 
   APIParams apiParams(apiKey, apiSecret, 5000, useTestnet);
+  Margin::setLeverage(apiParams, "BTCUSDT", LEVERAGE);
 
   // Setting up Google cloud pubsub
   const char *credentials_path = env["GOOGLE_CLOUD_CREDENTIALS_PATH"].c_str();
