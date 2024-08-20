@@ -4,6 +4,7 @@
 #include "order.h"
 #include "side.h"
 #include "spdlog/spdlog.h"
+#include <csignal>
 
 #define CANCEL_DELAY 3001 // Open Order Elimination
 #define TICK_SIZE 0.1
@@ -124,8 +125,11 @@ void process(int signal, const APIParams &apiParams, double quantity, double ent
   if (!validConditions) {
     return;
   }
+  auto logger = spdlog::get("signal_logger");
 
-  OrderInput order(SYMBOL, Side::fromSignal(signal), "LIMIT", "GTC", quantity, entryPrice);
+  auto side = Side::fromSignal(signal);
+  logger->critical("Side is: {}, Signal is: {}", side, signal);
+  OrderInput order(SYMBOL, side, "LIMIT", "GTC", quantity, entryPrice);
   auto order_response = OrderService::createOrder(apiParams, order);
 
   if (order_response.contains("orderId")) {
