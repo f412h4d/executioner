@@ -26,7 +26,7 @@
 #include "google/cloud/pubsub/subscriber.h"
 #include "google/cloud/pubsub/subscriber_connection.h"
 
-#define LEVERAGE 1
+#define LEVERAGE 3
 
 namespace pubsub = google::cloud::pubsub;
 
@@ -75,8 +75,8 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
 
       auto balance = Margin::getBalance(apiParams, "USDT");
       signal_logger->warn("Balance: {}", balance);
-      double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
-      double price = std::floor(price_settings->calculated_price * 1000) / 1000;
+      double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 100) / 100;
+      double price = std::floor(price_settings->calculated_price * 100) / 100;
       signal_logger->warn("Quantity: {}", quantity);
 
       SignalService::process(signal_settings->signal.value, apiParams, quantity, price);
