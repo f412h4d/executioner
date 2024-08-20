@@ -73,11 +73,11 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
 
       signal_logger->info("Received signal: {}", signal_settings->signal.toJsonString());
 
-      // auto balance_response = Margin::getBalance(apiParams, "BTCUSDT");
-      // double balance = balance_response["availableBalance"].get<double>();
-      // double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
-      //
-      // SignalService::process(signal_settings->signal.value, apiParams, quantity, price_settings->calculated_price);
+      auto balance_response = Margin::getBalance(apiParams, "BTCUSDT");
+      double balance = balance_response["availableBalance"].get<double>();
+      double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
+
+      SignalService::process(signal_settings->signal.value, apiParams, quantity, price_settings->calculated_price);
     } else if (message_type == "news") {
       std::lock_guard<std::mutex> lock(signal_settings->news_range_mutex);
       signal_settings->news_range = DatetimeRange::fromJsonString(message.data());
@@ -91,7 +91,6 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
     }
   } catch (const nlohmann::json::exception &e) {
     // Handle JSON parsing errors or other JSON-related issues
-    LOG_ERROR("pubsub_logger", "Failed parse the JSON");
     pubsub_logger->error("JSON parsing error: {}", e.what());
     pubsub_logger->error("Message data: {}", message.data());
 
