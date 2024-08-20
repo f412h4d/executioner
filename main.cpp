@@ -77,7 +77,7 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
       signal_logger->warn("Balance: {}", balance);
       signal_logger->warn("Price: {}", price_settings->calculated_price);
       double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
-      double price = std::floor(price_settings->calculated_price * 1000) / 1000;
+      double price = std::floor(price_settings->calculated_price * 10) / 10;
       signal_logger->warn("Price FLOOR: {}", price);
       signal_logger->warn("Quantity: {}", quantity);
 
