@@ -121,11 +121,16 @@ void cancelWithDelay(TradeSignal signal, const APIParams &apiParams, SignalQueue
 }
 
 void process(int signal, const APIParams &apiParams, double quantity, double entryPrice) {
+  auto logger = spdlog::get("signal_logger");
+  if (signal == 0) {
+    logger->warn("Ignoring the 0 signal");
+    return;
+  }
+
   bool validConditions = prepareForOrder(apiParams);
   if (!validConditions) {
     return;
   }
-  auto logger = spdlog::get("signal_logger");
 
   auto side = Side::fromSignal(signal);
   logger->critical("Side is: {}, Signal is: {}", side, signal);

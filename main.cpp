@@ -77,8 +77,10 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
       signal_logger->warn("Balance: {}", balance);
       double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
       signal_logger->warn("Quantity: {}", quantity);
+      signal_logger->warn("Signal: {}", signal.value);
 
-      SignalService::process(signal_settings->signal.value, apiParams, quantity, price_settings->calculated_price);
+      // FIXME: this -> signal_settings->signal.value did not work
+      SignalService::process(signal.value, apiParams, quantity, price_settings->calculated_price);
     } else if (message_type == "news") {
       std::lock_guard<std::mutex> lock(signal_settings->news_range_mutex);
       signal_settings->news_range = DatetimeRange::fromJsonString(message.data());
