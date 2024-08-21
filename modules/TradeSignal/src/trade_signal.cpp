@@ -72,38 +72,6 @@ bool prepareForOrder(const APIParams &apiParams) {
   return true;
 }
 
-void cancelWithDelay(TradeSignal signal, const APIParams &apiParams) {
-  auto cancel_queue_logger = spdlog::get("cancel_queue_logger");
-  cancel_queue_logger->info("Signal: {} Added to queue to be canceled", signal.toJsonString());
-
-  {
-    std::lock_guard<std::mutex> lock(cancel_mutex);
-    cancelQueue->addEvent(
-        TIME::now() + std::chrono::seconds(CANCEL_DELAY), "Order Cancel", [apiParams, cancel_queue_logger]() {
-          std::string order_id;
-          {
-            std::lock_guard<std::mutex> lock(order_mutex);
-            order_id = order->order_id;
-          }
-          auto order_details = OrderService::getOrderDetails(apiParams, "BTCUSDT", order_id, "");
-
-          if (!order_details.contains("status")) {
-            cancel_queue_logger->error("Failed to fetch order status. Response: {}", order_details.dump(4));
-            return;
-          }
-
-          std::string status = order_details["status"].get<std::string>();
-          if (status != "NEW") {
-            cancel_queue_logger->warn("Unexpected order status '{}', aborting cancel. Order Id: {}", status, order_id);
-            return;
-          }
-
-          OrderService::cancelOrder(apiParams, "BTCUSDT", order_id, "");
-          // ? Order status will be updated by websocket
-        });
-  }
-}
-
 void process(int signal, const APIParams &apiParams, double quantity, double entryPrice) {
   auto exec_logger = spdlog::get("exec_logger");
   if (signal == 0) {
@@ -141,7 +109,35 @@ void process(int signal, const APIParams &apiParams, double quantity, double ent
 
   exec_logger->info("Order placed successfully: {}", order_response.dump(4));
 
-  cancelWithDelay(signal, apiParams);
+  auto cancel_queue_logger = spdlog::get("cancel_queue_logger");
+  cancel_queue_logger->info("Signal: {} Added to queue to be canceled", signal);
+
+  {
+    std::lock_guard<std::mutex> lock(cancel_mutex);
+    cancelQueue->addEvent(
+        TIME::now() + std::chrono::seconds(CANCEL_DELAY), "Order Cancel", [apiParams, cancel_queue_logger]() {
+          std::string order_id;
+          {
+            std::lock_guard<std::mutex> lock(order_mutex);
+            order_id = order->order_id;
+          }
+          auto order_details = OrderService::getOrderDetails(apiParams, "BTCUSDT", order_id, "");
+
+          if (!order_details.contains("status")) {
+            cancel_queue_logger->error("Failed to fetch order status. Response: {}", order_details.dump(4));
+            return;
+          }
+
+          std::string status = order_details["status"].get<std::string>();
+          if (status != "NEW") {
+            cancel_queue_logger->warn("Unexpected order status '{}', aborting cancel. Order Id: {}", status, order_id);
+            return;
+          }
+
+          OrderService::cancelOrder(apiParams, "BTCUSDT", order_id, "");
+          // ? Order status will be updated by websocket
+        });
+  }
 }
 
 void placeTpAndSlOrders(const APIParams &apiParams, std::string side, double quantity, double tpPrice, double slPrice) {

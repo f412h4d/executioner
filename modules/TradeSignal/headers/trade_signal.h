@@ -6,7 +6,6 @@
 
 namespace SignalService {
 void process(int signal, const APIParams &apiParams, double quantity, double entryPrice);
-void cancelWithDelay(int signal, const APIParams &apiParams);
 void placeTpAndSlOrders(const APIParams &apiParams, std::string side, double quantity, double tpPrice, double slPrice);
 } // namespace Signal
 
