@@ -93,14 +93,15 @@ public:
 
           account_logger->info("Order {} with Client Order ID {} has been filled.", orderId, clientOrderId);
 
+          std::string side = order_info["S"].get<std::string>();
+          std::string inverted_side = (side == "BUY") ? "SELL" : "BUY";
           double quantity = std::round(std::stod(order_info["z"].get<std::string>()) * 1000) / 1000;
           double tpPrice = std::round(price_settings_->calculated_tp * 100) / 100;
           double slPrice = std::round(price_settings_->calculated_sl * 100) / 100;
-          std::string side = order_info["S"].get<std::string>();
 
           account_logger->info("Placing TP and SL orders for filled order: {}", orderId);
 
-          SignalService::placeTpAndSlOrders(api_params_, side, quantity, tpPrice, slPrice);
+          SignalService::placeTpAndSlOrders(api_params_, inverted_side, quantity, tpPrice, slPrice);
         } else {
           account_logger->info("Order update received but the status is neither CANCELED nor FILLED.");
         }
