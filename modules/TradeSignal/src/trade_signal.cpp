@@ -142,25 +142,34 @@ void process(int signal, const APIParams &apiParams, double quantity, double ent
 
 void placeTpAndSlOrders(const APIParams &apiParams, std::string side, double quantity, double tpPrice, double slPrice) {
   auto exec_logger = spdlog::get("exec_logger");
-  std::vector<std::thread> threads;
 
-  threads.emplace_back([&]() {
-    TriggerOrderInput tpOrder(SYMBOL, side, "TAKE_PROFIT_MARKET", "GTC", quantity, tpPrice, tpPrice, true);
-    auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
-    exec_logger->debug("TP Order Response: {}", tp_response.dump(4));
-  });
+  TriggerOrderInput tpOrder(SYMBOL, side, "TAKE_PROFIT_MARKET", "GTC", quantity, tpPrice, tpPrice, true);
+  auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
+  exec_logger->info("TP Order Response: {}", tp_response.dump(4));
 
-  threads.emplace_back([&]() {
-    TriggerOrderInput slOrder(SYMBOL, side, "STOP_MARKET", "GTC", quantity, slPrice, slPrice, true);
-    auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
-    exec_logger->debug("SL Order Response: {}", sl_response.dump(4));
-  });
+  TriggerOrderInput slOrder(SYMBOL, side, "STOP_MARKET", "GTC", quantity, slPrice, slPrice, true);
+  auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
+  exec_logger->info("SL Order Response: {}", sl_response.dump(4));
 
-  for (auto &thread : threads) {
-    if (thread.joinable()) {
-      thread.join();
-    }
-  }
+  // std::vector<std::thread> threads;
+  //
+  // threads.emplace_back([&]() {
+  //   TriggerOrderInput tpOrder(SYMBOL, side, "TAKE_PROFIT_MARKET", "GTC", quantity, tpPrice, tpPrice, true);
+  //   auto tp_response = OrderService::createTriggerOrder(apiParams, tpOrder);
+  //   exec_logger->debug("TP Order Response: {}", tp_response.dump(4));
+  // });
+  //
+  // threads.emplace_back([&]() {
+  //   TriggerOrderInput slOrder(SYMBOL, side, "STOP_MARKET", "GTC", quantity, slPrice, slPrice, true);
+  //   auto sl_response = OrderService::createTriggerOrder(apiParams, slOrder);
+  //   exec_logger->debug("SL Order Response: {}", sl_response.dump(4));
+  // });
+  //
+  // for (auto &thread : threads) {
+  //   if (thread.joinable()) {
+  //     thread.join();
+  //   }
+  // }
 }
 
 } // namespace SignalService
