@@ -5,6 +5,7 @@
 #include "order_model.h"
 #include "spdlog/spdlog.h"
 #include "trade_signal.h"
+#include "order.h"
 #include "user_session.hpp"
 #include <nlohmann/json.hpp>
 
@@ -84,26 +85,42 @@ public:
             }
           }
         }
-        // Check if the order has been filled
         else if (order_info.contains("x") && order_info["x"] == "TRADE" && order_info.contains("X") &&
-                 order_info["X"] == "FILLED") {
+                 order_info["X"] == "FILLED" && order_info.contains("o") && order_info["o"] == "LIMIT") {
 
           std::string clientOrderId = order_info["c"];
           std::string orderId = std::to_string(order_info["i"].get<long>());
 
-          account_logger->info("Order {} with Client Order ID {} has been filled.", orderId, clientOrderId);
+          account_logger->info("LIMIT Order {} with Client Order ID {} has been filled.", orderId, clientOrderId);
 
-          std::string side = order_info["S"].get<std::string>();
-          std::string inverted_side = (side == "BUY") ? "SELL" : "BUY";
           double quantity = std::round(std::stod(order_info["z"].get<std::string>()) * 1000) / 1000;
           double tpPrice = std::round(price_settings_->calculated_tp * 100) / 100;
           double slPrice = std::round(price_settings_->calculated_sl * 100) / 100;
 
-          account_logger->info("Placing TP and SL orders for filled order: {}", orderId);
+          std::string side = order_info["S"].get<std::string>();
+          std::string inverted_side = (side == "BUY") ? "SELL" : "BUY";
+
+          account_logger->info("Placing TP and SL orders for filled LIMIT order: {}", orderId);
 
           SignalService::placeTpAndSlOrders(api_params_, inverted_side, quantity, tpPrice, slPrice);
+        }
+        // Check if the order has been filled and is a MARKET order
+        else if (order_info.contains("x") && order_info["x"] == "TRADE" && order_info.contains("X") &&
+                 order_info["X"] == "FILLED" && order_info.contains("o") && order_info["o"] == "MARKET") {
+
+          std::string clientOrderId = order_info["c"];
+          std::string orderId = std::to_string(order_info["i"].get<long>());
+
+          account_logger->info("MARKET Order {} with Client Order ID {} has been filled.", orderId, clientOrderId);
+
+          // Cleanup by canceling all remaining orders
+          account_logger->info("Initiating cleanup by canceling all open orders.");
+
+          auto response = OrderService::cancelAllOpenOrders(api_params_, "BTCUSDT");
+
+          account_logger->info("Cancel All Orders Response: {}", response.dump(4));
         } else {
-          account_logger->info("Order update received but the status is neither CANCELED nor FILLED.");
+          account_logger->info("Order update received but the status or type is not as expected.");
         }
       } else {
         account_logger->warn("Received message does not contain order information.");
