@@ -35,7 +35,7 @@ namespace pubsub = google::cloud::pubsub;
 // Shared object and mutex between websocket threads
 auto signal_settings = std::make_shared<SignalSettings>();
 
-auto order = std::make_shared<Order>();
+std::shared_ptr<Order> order = std::make_shared<Order>();
 std::mutex order_mutex;
 
 auto price_settings = std::make_shared<PriceSettings>();

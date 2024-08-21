@@ -7,7 +7,6 @@
 #include "user_session.hpp"
 #include <nlohmann/json.hpp>
 
-
 extern std::shared_ptr<Order> order;
 extern std::mutex order_mutex;
 
