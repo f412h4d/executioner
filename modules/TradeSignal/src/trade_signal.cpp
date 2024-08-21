@@ -8,7 +8,7 @@
 #include "spdlog/spdlog.h"
 #include <csignal>
 
-#define CANCEL_DELAY 10 // Open Order Elimination
+#define CANCEL_DELAY 50 // Open Order Elimination
 #define TICK_SIZE 0.1
 #define SYMBOL "BTCUSDT"
 
