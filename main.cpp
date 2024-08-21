@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "APIParams.h"
+#include "SignalQueue.h"
 #include "logger.h"
 #include "margin.h"
 #include "modules/Order/models/order_model.h"
@@ -39,6 +40,9 @@ std::mutex order_mutex;
 
 auto price_settings = std::make_shared<PriceSettings>();
 std::mutex price_mutex;
+
+auto cancelQueue = std::make_shared<SignalQueue>();
+std::mutex cancel_mutex;
 
 // Global variable to store the subscriber's start time
 auto subscriber_start_time = std::chrono::steady_clock::now();

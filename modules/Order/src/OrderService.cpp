@@ -70,7 +70,7 @@ nlohmann::json OrderService::createTriggerOrder(const APIParams &apiParams, cons
 }
 
 nlohmann::json OrderService::cancelOrder(const APIParams &apiParams, const std::string &symbol,
-                                               const std::string &orderId, const std::string &origClientOrderId) {
+                                         const std::string &orderId, const std::string &origClientOrderId) {
   auto order_logger = spdlog::get("order_logger");
   std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
   std::string apiCall = "fapi/v1/order";
@@ -154,6 +154,8 @@ nlohmann::json OrderService::getOrderDetails(const APIParams &apiParams, const s
 std::tuple<std::string, std::string, std::string, double, double>
 OrderService::validateOrderResponse(const nlohmann::json &order_response) {
   auto exec_logger = spdlog::get("exec_logger");
+
+  exec_logger->info(order_response.dump(4));
 
   if (!order_response.contains("orderId") || !order_response["orderId"].is_number_integer()) {
     exec_logger->critical("Failure in createOrder, orderId not found or invalid in the response. response: {}",
