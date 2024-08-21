@@ -93,10 +93,9 @@ public:
 
           account_logger->info("Order {} with Client Order ID {} has been filled.", orderId, clientOrderId);
 
-          // Extract relevant fields for placing TP and SL orders
-          double quantity = std::stod(order_info["z"].get<std::string>());
-          double tpPrice = price_settings_->calculated_tp;
-          double slPrice = price_settings_->calculated_sl;
+          double quantity = std::round(std::stod(order_info["z"].get<std::string>()) * 1000) / 1000;
+          double tpPrice = std::round(price_settings_->calculated_tp * 100) / 100;
+          double slPrice = std::round(price_settings_->calculated_sl * 100) / 100;
           std::string side = order_info["S"].get<std::string>();
 
           account_logger->info("Placing TP and SL orders for filled order: {}", orderId);
