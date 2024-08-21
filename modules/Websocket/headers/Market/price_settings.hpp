@@ -3,8 +3,8 @@
 
 struct PriceSettings {
     double entry_gap = 0.001;
-    double tp_price_percentage = 0.014;
-    double sl_price_percentage = -0.01;
+    double tp_price_percentage = 0.05;
+    double sl_price_percentage = -0.05;
     double current_price = 0.0;
     double calculated_tp = 0.0;
     double calculated_sl = 0.0;
