@@ -54,6 +54,7 @@ public:
       return fail(ec, "read");
 
     std::string message = boost::beast::buffers_to_string(buffer_.data());
+    account_logger->info("Account Update Message: {}", message);
 
     try {
       // Parse the message as JSON

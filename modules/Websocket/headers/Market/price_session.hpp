@@ -40,7 +40,6 @@ public:
       return fail(ec, "read");
 
     std::string message = boost::beast::buffers_to_string(buffer_.data());
-    market_logger->info(message);
 
     try {
       auto json_msg = nlohmann::json::parse(message);
@@ -57,11 +56,6 @@ public:
           price_settings_->calculated_tp = tp_price;
           price_settings_->calculated_price = entry_price;
         }
-
-        market_logger->debug("Price: {}", current_price);
-        market_logger->debug("Entry Gap Price: {}", entry_price);
-        market_logger->debug("Take Profit Price: {}", tp_price);
-        market_logger->debug("Stop Loss Price: {}", sl_price);
       }
     } catch (const std::exception &e) {
       market_logger->error("Error parsing JSON or updating price: {}", e.what());
