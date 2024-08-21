@@ -7,7 +7,7 @@
 #include "spdlog/spdlog.h"
 #include <csignal>
 
-#define CANCEL_DELAY 3001 // Open Order Elimination
+#define CANCEL_DELAY 10 // Open Order Elimination
 #define TICK_SIZE 0.1
 #define SYMBOL "BTCUSDT"
 
@@ -68,6 +68,73 @@ bool prepareForOrder(const APIParams &apiParams) {
   return true;
 }
 
+void process(int signal, const APIParams &apiParams, double quantity, double entryPrice) {
+  auto exec_logger = spdlog::get("exec_logger");
+  if (signal == 0) {
+    exec_logger->warn("Ignoring the 0 signal");
+    return;
+  }
+
+  bool validConditions = prepareForOrder(apiParams);
+  if (!validConditions) {
+    return;
+  }
+
+  OrderInput order_input(SYMBOL, Side::fromSignal(signal), "LIMIT", "GTC", quantity, entryPrice);
+  auto order_response = OrderService::createOrder(apiParams, order_input);
+
+  if (order_response.empty()) {
+    exec_logger->critical("Order response is empty.");
+    return;
+  }
+
+  try {
+    auto [order_id, side, status, quantity, price] = OrderService::validateOrderResponse(order_response);
+    {
+      std::lock_guard<std::mutex> lock(order_mutex);
+      order->order_id = order_id;
+      order->side = side;
+      order->status = status;
+      order->quantity = quantity;
+      order->price = price;
+    }
+  } catch (const std::exception &e) {
+    exec_logger->critical("Order validation failed: {}", e.what());
+    return;
+  }
+
+  exec_logger->info("Order placed successfully: {}", order_response.dump(4));
+}
+
+void cancelWithDelay(TradeSignal signal, const APIParams &apiParams, SignalQueue &cancelQueue) {
+  auto cancel_queue_logger = spdlog::get("cancel_queue_logger");
+  cancel_queue_logger->info("Signal: {} Added to queue to be canceled", signal.toJsonString());
+
+  cancelQueue.addEvent(
+      TIME::now() + std::chrono::seconds(CANCEL_DELAY), "Order Cancel", [apiParams, cancel_queue_logger]() {
+        std::string order_id;
+        {
+          std::lock_guard<std::mutex> lock(order_mutex);
+          order_id = order->order_id;
+        }
+        auto order_details = OrderService::getOrderDetails(apiParams, "BTCUSDT", order_id, "");
+
+        if (!order_details.contains("status")) {
+          cancel_queue_logger->error("Failed to fetch order status. Response: {}", order_details.dump(4));
+          return;
+        }
+
+        std::string status = order_details["status"].get<std::string>();
+        if (status != "NEW") {
+          cancel_queue_logger->warn("Unexpected order status '{}', aborting cancel. Order Id: {}", status, order_id);
+          return;
+        }
+
+        OrderService::cancelOrder(apiParams, "BTCUSDT", order_id, "");
+        // ? Order status will be updated by websocket
+      });
+}
+
 void placeTpAndSlOrders(const APIParams &apiParams, std::string side, double quantity, double tpPrice, double slPrice) {
   auto exec_logger = spdlog::get("exec_logger");
   std::vector<std::thread> threads;
@@ -89,82 +156,6 @@ void placeTpAndSlOrders(const APIParams &apiParams, std::string side, double qua
       thread.join();
     }
   }
-}
-
-void cancelWithDelay(TradeSignal signal, const APIParams &apiParams, SignalQueue &cancelQueue) {
-  auto cancel_queue_logger = spdlog::get("cancel_queue_logger");
-  cancel_queue_logger->info("Signal: {} Added to queue to be canceled", signal.toJsonString());
-
-  cancelQueue.addEvent(TIME::now() + std::chrono::seconds(CANCEL_DELAY), "Order Cancel",
-                       [&apiParams, cancel_queue_logger]() {
-                         std::string notional;
-                         auto positions_response = Margin::getPositions(apiParams, "BTCUSDT");
-
-                         if (positions_response.is_array() && positions_response[0].contains("notional")) {
-                           notional = positions_response[0]["notional"];
-                         } else {
-                           cancel_queue_logger->error("Notional not found in the response");
-                           return;
-                         }
-
-                         if (notional != "0") {
-                           cancel_queue_logger->info("Canceling aborted due to open position");
-                           return;
-                         }
-
-                         cancel_queue_logger->info("Canceling:");
-
-                         auto open_orders_response = Margin::getOpenOrders(apiParams, "BTCUSDT");
-                         if (open_orders_response.is_array() && !open_orders_response.empty()) {
-                           auto response = OrderService::cancelAllOpenOrders(apiParams, "BTCUSDT");
-                           cancel_queue_logger->info("Cancel All Orders Response: {}", response.dump(4));
-                         } else {
-                           cancel_queue_logger->error("Unexpected response format: {}", open_orders_response.dump(4));
-                         }
-                       });
-}
-
-void process(int signal, const APIParams &apiParams, double quantity, double entryPrice) {
-  auto exec_logger = spdlog::get("exec_logger");
-  if (signal == 0) {
-    exec_logger->warn("Ignoring the 0 signal");
-    return;
-  }
-
-  bool validConditions = prepareForOrder(apiParams);
-  if (!validConditions) {
-    return;
-  }
-
-  auto side = "";
-  // FIXME: set side and other values from response instead
-
-  OrderInput order_input(SYMBOL, Side::fromSignal(signal), "LIMIT", "GTC", quantity, entryPrice);
-  auto order_response = OrderService::createOrder(apiParams, order_input);
-
-  if (!order_response.contains("orderId")) {
-    exec_logger->critical("Failure in createOrder, orderId not found in the response. response: {}", order_response);
-    return;
-  }
-
-  std::string order_id;
-  if (order_response["orderId"].is_string()) {
-    exec_logger->warn("It was string");
-    order_id = order_response["orderId"].get<std::string>();
-  } else if (order_response["orderId"].is_number()) {
-    exec_logger->warn("It was number");
-    order_id = std::to_string(order_response["orderId"].get<long>());
-  }
-
-  {
-    std::lock_guard<std::mutex> lock(order_mutex);
-    order->order_id = order_id;
-    order->side = side;
-    order->quantity = quantity;
-    order->price = entryPrice;
-  }
-
-  exec_logger->info("Order placed successfully: {}", order_response.dump(4));
 }
 
 } // namespace SignalService

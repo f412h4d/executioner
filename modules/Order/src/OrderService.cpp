@@ -69,7 +69,7 @@ nlohmann::json OrderService::createTriggerOrder(const APIParams &apiParams, cons
   return nlohmann::json::parse(r.text);
 }
 
-nlohmann::json OrderService::cancelSingleOrder(const APIParams &apiParams, const std::string &symbol,
+nlohmann::json OrderService::cancelOrder(const APIParams &apiParams, const std::string &symbol,
                                                const std::string &orderId, const std::string &origClientOrderId) {
   auto order_logger = spdlog::get("order_logger");
   std::string baseUrl = apiParams.useTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
@@ -151,36 +151,45 @@ nlohmann::json OrderService::getOrderDetails(const APIParams &apiParams, const s
   return nlohmann::json::parse(r.text);
 }
 
-std::tuple<std::string, std::string, double, double> validateOrderResponse(const nlohmann::json &order_response) {
+std::tuple<std::string, std::string, std::string, double, double>
+OrderService::validateOrderResponse(const nlohmann::json &order_response) {
   auto exec_logger = spdlog::get("exec_logger");
 
-  if (!order_response.contains("orderId") || !order_response["orderId"].is_number()) {
+  if (!order_response.contains("orderId") || !order_response["orderId"].is_number_integer()) {
     exec_logger->critical("Failure in createOrder, orderId not found or invalid in the response. response: {}",
                           order_response);
-    throw std::runtime_error("Invalid or missing orderId in order response.");
+    throw std::runtime_error("Invalid orderId in response");
   }
-  std::string order_id = std::to_string(order_response["orderId"].get<long>());
 
   if (!order_response.contains("side") || !order_response["side"].is_string()) {
     exec_logger->critical("Failure in createOrder, side not found or invalid in the response. response: {}",
                           order_response);
-    throw std::runtime_error("Invalid or missing side in order response.");
+    throw std::runtime_error("Invalid side in response");
   }
-  std::string side = order_response["side"].get<std::string>();
 
-  if (!order_response.contains("origQty") || !order_response["origQty"].is_string()) {
+  if (!order_response.contains("origQty") || !order_response["origQty"].is_number_float()) {
     exec_logger->critical("Failure in createOrder, origQty not found or invalid in the response. response: {}",
                           order_response);
-    throw std::runtime_error("Invalid or missing origQty in order response.");
+    throw std::runtime_error("Invalid origQty in response");
   }
-  double quantity = std::stod(order_response["origQty"].get<std::string>());
 
-  if (!order_response.contains("price") || !order_response["price"].is_string()) {
+  if (!order_response.contains("price") || !order_response["price"].is_number_float()) {
     exec_logger->critical("Failure in createOrder, price not found or invalid in the response. response: {}",
                           order_response);
-    throw std::runtime_error("Invalid or missing price in order response.");
+    throw std::runtime_error("Invalid price in response");
   }
+
+  if (!order_response.contains("status") || !order_response["status"].is_string()) {
+    exec_logger->critical("Failure in createOrder, status not found or invalid in the response. response: {}",
+                          order_response);
+    throw std::runtime_error("Invalid status in response");
+  }
+
+  std::string order_id = std::to_string(order_response["orderId"].get<long>());
+  std::string side = order_response["side"].get<std::string>();
+  std::string status = order_response["status"].get<std::string>();
+  double quantity = std::stod(order_response["origQty"].get<std::string>());
   double price = std::stod(order_response["price"].get<std::string>());
 
-  return std::make_tuple(order_id, side, quantity, price);
+  return std::make_tuple(order_id, side, status, quantity, price);
 }
