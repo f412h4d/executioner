@@ -169,13 +169,13 @@ OrderService::validateOrderResponse(const nlohmann::json &order_response) {
     throw std::runtime_error("Invalid side in response");
   }
 
-  if (!order_response.contains("origQty") || !order_response["origQty"].is_number_float()) {
+  if (!order_response.contains("origQty") || !order_response["origQty"].is_number()) {
     exec_logger->critical("Failure in createOrder, origQty not found or invalid in the response. response: {}",
                           order_response);
     throw std::runtime_error("Invalid origQty in response");
   }
 
-  if (!order_response.contains("price") || !order_response["price"].is_number_float()) {
+  if (!order_response.contains("price") || !order_response["price"].is_number()) {
     exec_logger->critical("Failure in createOrder, price not found or invalid in the response. response: {}",
                           order_response);
     throw std::runtime_error("Invalid price in response");
