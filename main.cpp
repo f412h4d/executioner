@@ -8,6 +8,7 @@
 #include "APIParams.h"
 #include "logger.h"
 #include "margin.h"
+#include "modules/Order/models/order_model.h"
 #include "modules/TradeSignal/headers/trade_signal.h"
 #include "modules/TradeSignal/models/signal_settings_model.h"
 #include "modules/TradeSignal/models/trade_signal_model.h"
@@ -31,9 +32,10 @@
 namespace pubsub = google::cloud::pubsub;
 
 // Shared object and mutex between websocket threads
-
-// Shared object for signal settings
 auto signal_settings = std::make_shared<SignalSettings>();
+
+auto order = std::make_shared<Order>();
+std::mutex order_mutex;
 
 auto price_settings = std::make_shared<PriceSettings>();
 std::mutex price_mutex;
@@ -70,16 +72,11 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
       TradeSignal signal;
       signal.fromJsonString(message.data());
       signal_settings->signal = signal;
-
       signal_logger->info("Received signal: {}", signal_settings->signal.toJsonString());
 
       auto balance = Margin::getBalance(apiParams, "USDT");
-      signal_logger->warn("Balance: {}", balance);
-      signal_logger->warn("Price: {}", price_settings->calculated_price);
       double quantity = std::floor((balance * LEVERAGE / price_settings->calculated_price) * 1000) / 1000;
       double price = std::floor(price_settings->calculated_price * 10) / 10;
-      signal_logger->warn("Price FLOOR: {}", price);
-      signal_logger->warn("Quantity: {}", quantity);
 
       SignalService::process(signal_settings->signal.value, apiParams, quantity, price);
     } else if (message_type == "news") {
@@ -94,24 +91,19 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
       pubsub_logger->warn("Unknown message type: {}", message_type);
     }
   } catch (const nlohmann::json::exception &e) {
-    // Handle JSON parsing errors or other JSON-related issues
     pubsub_logger->error("JSON parsing error: {}", e.what());
     pubsub_logger->error("Message data: {}", message.data());
 
-    // Optionally, decide how to handle this case (e.g., skip the message)
     std::move(ack_handler).ack(); // Acknowledge the message to prevent reprocessing
     return;
   } catch (const std::exception &e) {
-    // Handle other exceptions that may occur
     pubsub_logger->error("Error processing message: {}", e.what());
     pubsub_logger->error("Message data: {}", message.data());
 
-    // Optionally, decide how to handle this case (e.g., skip the message)
     std::move(ack_handler).ack(); // Acknowledge the message to prevent reprocessing
     return;
   }
 
-  // If everything goes well, acknowledge the message
   std::move(ack_handler).ack();
 }
 

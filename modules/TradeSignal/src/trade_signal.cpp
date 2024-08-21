@@ -2,6 +2,7 @@
 #include "../../../modules/TradeSignal/models/trade_signal_model.h"
 #include "margin.h"
 #include "order.h"
+#include "order_model.h"
 #include "side.h"
 #include "spdlog/spdlog.h"
 #include <csignal>
@@ -9,6 +10,9 @@
 #define CANCEL_DELAY 3001 // Open Order Elimination
 #define TICK_SIZE 0.1
 #define SYMBOL "BTCUSDT"
+
+extern std::shared_ptr<Order> order;
+extern std::mutex order_mutex;
 
 namespace SignalService {
 
@@ -121,9 +125,9 @@ void cancelWithDelay(TradeSignal signal, const APIParams &apiParams, SignalQueue
 }
 
 void process(int signal, const APIParams &apiParams, double quantity, double entryPrice) {
-  auto logger = spdlog::get("signal_logger");
+  auto exec_logger = spdlog::get("exec_logger");
   if (signal == 0) {
-    logger->warn("Ignoring the 0 signal");
+    exec_logger->warn("Ignoring the 0 signal");
     return;
   }
 
@@ -132,20 +136,35 @@ void process(int signal, const APIParams &apiParams, double quantity, double ent
     return;
   }
 
-  auto side = Side::fromSignal(signal);
-  logger->critical("Side is: {}, Signal is: {}", side, signal);
-  OrderInput order(SYMBOL, side, "LIMIT", "GTC", quantity, entryPrice);
-  auto order_response = OrderService::createOrder(apiParams, order);
+  auto side = "";
+  // FIXME: set side and other values from response instead
 
-  if (order_response.contains("orderId")) {
-    std::string orderId;
+  OrderInput order_input(SYMBOL, Side::fromSignal(signal), "LIMIT", "GTC", quantity, entryPrice);
+  auto order_response = OrderService::createOrder(apiParams, order_input);
 
-    if (order_response["orderId"].is_string()) {
-      orderId = order_response["orderId"].get<std::string>();
-    } else if (order_response["orderId"].is_number()) {
-      orderId = std::to_string(order_response["orderId"].get<long>());
-    }
+  if (!order_response.contains("orderId")) {
+    exec_logger->critical("Failure in createOrder, orderId not found in the response. response: {}", order_response);
+    return;
   }
+
+  std::string order_id;
+  if (order_response["orderId"].is_string()) {
+    exec_logger->warn("It was string");
+    order_id = order_response["orderId"].get<std::string>();
+  } else if (order_response["orderId"].is_number()) {
+    exec_logger->warn("It was number");
+    order_id = std::to_string(order_response["orderId"].get<long>());
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(order_mutex);
+    order->order_id = order_id;
+    order->side = side;
+    order->quantity = quantity;
+    order->price = entryPrice;
+  }
+
+  exec_logger->info("Order placed successfully: {}", order_response.dump(4));
 }
 
 } // namespace SignalService
