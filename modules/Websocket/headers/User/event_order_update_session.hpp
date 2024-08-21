@@ -4,6 +4,7 @@
 #include "../Market/price_settings.hpp"
 #include "order_model.h"
 #include "spdlog/spdlog.h"
+#include "trade_signal.h"
 #include "user_session.hpp"
 #include <nlohmann/json.hpp>
 
@@ -82,8 +83,27 @@ public:
               account_logger->warn("Order ID {} does not match the shared order ID.", orderId);
             }
           }
+        }
+        // Check if the order has been filled
+        else if (order_info.contains("x") && order_info["x"] == "TRADE" && order_info.contains("X") &&
+                 order_info["X"] == "FILLED") {
+
+          std::string clientOrderId = order_info["c"];
+          std::string orderId = std::to_string(order_info["i"].get<long>());
+
+          account_logger->info("Order {} with Client Order ID {} has been filled.", orderId, clientOrderId);
+
+          // Extract relevant fields for placing TP and SL orders
+          double quantity = std::stod(order_info["z"].get<std::string>());
+          double tpPrice = price_settings_->calculated_tp;
+          double slPrice = price_settings_->calculated_sl;
+          std::string side = order_info["S"].get<std::string>();
+
+          account_logger->info("Placing TP and SL orders for filled order: {}", orderId);
+
+          SignalService::placeTpAndSlOrders(api_params_, side, quantity, tpPrice, slPrice);
         } else {
-          account_logger->info("Order update received but the status is not CANCELED.");
+          account_logger->info("Order update received but the status is neither CANCELED nor FILLED.");
         }
       } else {
         account_logger->warn("Received message does not contain order information.");
