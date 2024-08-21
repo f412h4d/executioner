@@ -159,37 +159,38 @@ OrderService::validateOrderResponse(const nlohmann::json &order_response) {
 
   if (!order_response.contains("orderId") || !order_response["orderId"].is_number_integer()) {
     exec_logger->critical("Failure in createOrder, orderId not found or invalid in the response. response: {}",
-                          order_response);
+                          order_response.dump(4));
     throw std::runtime_error("Invalid orderId in response");
   }
 
   if (!order_response.contains("side") || !order_response["side"].is_string()) {
     exec_logger->critical("Failure in createOrder, side not found or invalid in the response. response: {}",
-                          order_response);
+                          order_response.dump(4));
     throw std::runtime_error("Invalid side in response");
   }
 
-  if (!order_response.contains("origQty") || !order_response["origQty"].is_number()) {
+  if (!order_response.contains("origQty") || !order_response["origQty"].is_string()) {
     exec_logger->critical("Failure in createOrder, origQty not found or invalid in the response. response: {}",
-                          order_response);
+                          order_response.dump(4));
     throw std::runtime_error("Invalid origQty in response");
   }
 
-  if (!order_response.contains("price") || !order_response["price"].is_number()) {
+  if (!order_response.contains("price") || !order_response["price"].is_string()) {
     exec_logger->critical("Failure in createOrder, price not found or invalid in the response. response: {}",
-                          order_response);
+                          order_response.dump(4));
     throw std::runtime_error("Invalid price in response");
   }
 
   if (!order_response.contains("status") || !order_response["status"].is_string()) {
     exec_logger->critical("Failure in createOrder, status not found or invalid in the response. response: {}",
-                          order_response);
+                          order_response.dump(4));
     throw std::runtime_error("Invalid status in response");
   }
 
   std::string order_id = std::to_string(order_response["orderId"].get<long>());
   std::string side = order_response["side"].get<std::string>();
   std::string status = order_response["status"].get<std::string>();
+
   double quantity = std::stod(order_response["origQty"].get<std::string>());
   double price = std::stod(order_response["price"].get<std::string>());
 
