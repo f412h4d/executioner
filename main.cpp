@@ -28,7 +28,7 @@
 #include "google/cloud/pubsub/subscriber.h"
 #include "google/cloud/pubsub/subscriber_connection.h"
 
-#define LEVERAGE 3
+#define LEVERAGE 5
 
 namespace pubsub = google::cloud::pubsub;
 
@@ -60,7 +60,7 @@ void pubsub_callback(pubsub::Message const &message, pubsub::AckHandler ack_hand
   auto time_since_start = std::chrono::duration_cast<std::chrono::seconds>(now - subscriber_start_time).count();
 
   // Discard messages received within the first 5 seconds
-  if (time_since_start <= 5) {
+  if (time_since_start <= 15) {
     pubsub_logger->info("Discarding message received within the first 5 seconds after startup.");
     std::move(ack_handler).ack(); // Acknowledge the message to prevent reprocessing
     return;

@@ -31,8 +31,8 @@ struct TradeSignal {
   void fromJsonString(const std::string &json_string) {
     nlohmann::json json_message = nlohmann::json::parse(json_string);
 
-    lag = json_message["lag"].get<int>();
-    value = json_message["value"].get<int>();
+    lag = std::stoi(json_message["lag"].get<std::string>());
+    value = std::stoi(json_message["value"].get<std::string>());
     datetime = json_message["datetime"].get<std::string>();
   }
 };
